@@ -16,7 +16,12 @@
   const mainImage = $('#main-image');
   const productName = $('#product-name');
   const productPrice = $('#product-price');
+  const productShortDescription = $('#product-short-description');
+  const productTags = $('#product-tags');
   const productDescription = $('#product-description');
+  const productDetails = $('#product-details');
+  const relatedProductsList = $('#related-products-list');
+  const proposedProductsList = $('#proposed-products-list');
   const swatchGrid = $('#swatch-grid');
   const sizeButtons = $('#size-buttons');
   const qtyInput = $('#qty-input');
@@ -109,7 +114,6 @@
       swatchGrid.appendChild(swatch);
       idx++;
     }
-    // If only one color, optionally hide label - that's up to styling.
   }
 
   function renderSizes(variants_for_color) {
@@ -198,13 +202,56 @@
       if (!res.ok) {
         alert(data.error || 'Failed to add to cart');
       } else {
-        // success: maybe show a mini-toast or redirect to cart
         addToCartBtn.textContent = 'Added ✓';
         setTimeout(()=> addToCartBtn.textContent = 'Add to cart', 1500);
       }
     } catch (err) {
       console.error(err);
       alert('Network error when adding to cart');
+    }
+  }
+
+  function renderProductCard(p) {
+    const col = document.createElement('div');
+    col.className = 'col';
+    const firstImg = p.images && p.images[0] ? p.images[0].url : 'https://via.placeholder.com/300';
+    col.innerHTML = `
+      <div class="card h-100 border-0 shadow-sm product-card">
+        <a href="/product/${p.product_sku}" class="text-decoration-none text-dark">
+          <div class="card-img-top-wrap overflow-hidden rounded">
+            <img src="${firstImg}" class="card-img-top" alt="${p.name}" style="height: 200px; object-fit: cover;">
+          </div>
+          <div class="card-body px-2 py-3">
+            <h5 class="card-title h6 mb-1 text-truncate">${p.name}</h5>
+            <p class="card-text fw-bold text-primary mb-0">${formatPrice(p.base_price_cents)}</p>
+          </div>
+        </a>
+      </div>
+    `;
+    return col;
+  }
+
+  async function loadRelatedProposed(skus, container) {
+    if (!skus || !skus.length) {
+      if (container.closest('.mt-5')) container.closest('.mt-5').style.display = 'none';
+      return;
+    }
+    container.innerHTML = '';
+    let count = 0;
+    for (const sku of skus) {
+      try {
+        const res = await fetch(`/api/products/${encodeURIComponent(sku)}`);
+        if (res.ok) {
+          const p = await res.json();
+          container.appendChild(renderProductCard(p));
+          count++;
+        }
+      } catch (err) {
+        console.error(`Failed to load related/proposed product ${sku}`, err);
+      }
+    }
+    if (count === 0 && container.closest('.mt-5')) {
+      container.closest('.mt-5').style.display = 'none';
     }
   }
 
@@ -216,8 +263,24 @@
       product = await res.json();
 
       productName.textContent = product.name;
+      productShortDescription.textContent = product.short_description || '';
       productDescription.textContent = product.description || '';
+      productDetails.textContent = product.product_details || '';
       productPrice.textContent = formatPrice(product.base_price_cents || 0);
+
+      // Render tags
+      productTags.innerHTML = '';
+      [product.tag1, product.tag2, product.tag3].forEach(t => {
+        if (t && t.trim()) {
+          const badge = document.createElement('span');
+          badge.className = 'badge rounded-pill bg-light text-dark border';
+          badge.textContent = t;
+          productTags.appendChild(badge);
+        }
+      });
+
+      loadRelatedProposed(product.related_products, relatedProductsList);
+      loadRelatedProposed(product.proposed_products, proposedProductsList);
 
       // ensure images arrays exist
       product.images = product.images || [];
@@ -259,9 +322,6 @@
       productDescription.textContent = '';
     }
   }
-
-  // CSS class names injection for selected outline (if not in stylesheet)
-  
 
   init();
 })();

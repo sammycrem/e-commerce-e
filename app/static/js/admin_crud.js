@@ -1,6 +1,6 @@
 // static/js/admin_crud.js
 // Admin Product CRUD using SKU as identifier
-// Fixed: prefill variant images when editing a product
+// Updated to support new attributes: short_description, product_details, related_products, proposed_products, tag1, tag2, tag3
 
 (function () {
   'use strict';
@@ -34,140 +34,152 @@
     if (!imagesContainer || !variantsContainer) return;
 
     function showFeedback(msg, type = 'info') {
-      feedback.style.display = 'block';
-      feedback.className = `feedback ${type === 'error' ? 'error' : 'success'}`;
-      feedback.textContent = msg;
+      if (feedback) {
+          feedback.classList.remove('d-none');
+          feedback.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show mb-0`;
+          feedback.textContent = msg;
+          setTimeout(() => feedback.classList.add('d-none'), 3000);
+      } else {
+          alert(msg);
+      }
     }
 
     function parsePriceToCents(str) {
-      const cleaned = (str || '').replace(',', '.').replace(/[^0-9.]/g, '');
+      const cleaned = (str || '').toString().replace(',', '.').replace(/[^0-9.]/g, '');
       const val = parseFloat(cleaned);
       return isNaN(val) ? 0 : Math.round(val * 100);
     }
 
     // Add product image row
     function addProductImageRow(url = '', alt = '', order = 0) {
-      const row = el('div', { class: 'image-row', 'data-role': 'product-image', style: 'display:flex; gap:8px; margin-bottom:6px;' },
-        el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url }),
-        el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
-        el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
-        el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
+      const col = el('div', { class: 'col-md-6 mb-2', 'data-role': 'product-image' },
+        el('div', { class: 'card p-2 bg-light' },
+            el('input', { type: 'text', class: 'form-control form-control-sm mb-1 img-url', placeholder: 'Image URL', value: url }),
+            el('input', { type: 'text', class: 'form-control form-control-sm mb-1 img-alt', placeholder: 'Alt text', value: alt }),
+            el('div', { class: 'd-flex gap-2' },
+                el('input', { type: 'number', class: 'form-control form-control-sm img-order', placeholder: 'Order', value: order }),
+                el('button', { class: 'btn btn-sm btn-outline-danger', type: 'button' }, 'Remove')
+            )
+        )
       );
-      row.querySelector('button').addEventListener('click', () => row.remove());
-      imagesContainer.appendChild(row);
+      col.querySelector('button').addEventListener('click', () => col.remove());
+      imagesContainer.appendChild(col);
     }
 
-    // Add variant row — now supports prefill.images
+    // Add variant row
     function addVariantRow(prefill = {}) {
-      const wrapper = el('div', { class: 'variant-fields', style: 'border:1px solid #eee; padding:10px; border-radius:6px; margin-bottom:8px;' });
+      const id = 'v-' + Math.random().toString(36).substr(2, 9);
+      const accordionItem = el('div', { class: 'accordion-item' },
+        el('h2', { class: 'accordion-header' },
+            el('button', { class: 'accordion-button collapsed', type: 'button', 'data-bs-toggle': 'collapse', 'data-bs-target': '#' + id },
+                prefill.sku ? `Variant: ${prefill.sku}` : 'New Variant'
+            )
+        ),
+        el('div', { id: id, class: 'accordion-collapse collapse', 'data-bs-parent': '#variants' },
+            el('div', { class: 'accordion-body variant-fields' },
+                el('div', { class: 'row g-2 mb-3' },
+                    el('div', { class: 'col-md-6' },
+                        el('label', { class: 'small fw-bold' }, 'Variant SKU'),
+                        el('input', { type: 'text', class: 'form-control form-control-sm variant-sku', value: prefill.sku || '' })
+                    ),
+                    el('div', { class: 'col-md-3' },
+                        el('label', { class: 'small fw-bold' }, 'Color'),
+                        el('input', { type: 'text', class: 'form-control form-control-sm variant-color', value: prefill.color_name || '' })
+                    ),
+                    el('div', { class: 'col-md-3' },
+                        el('label', { class: 'small fw-bold' }, 'Size'),
+                        el('input', { type: 'text', class: 'form-control form-control-sm variant-size', value: prefill.size || '' })
+                    )
+                ),
+                el('div', { class: 'row g-2 mb-3' },
+                    el('div', { class: 'col-md-6' },
+                        el('label', { class: 'small fw-bold' }, 'Stock'),
+                        el('input', { type: 'number', class: 'form-control form-control-sm variant-stock', value: prefill.stock_quantity || 0 })
+                    ),
+                    el('div', { class: 'col-md-6' },
+                        el('label', { class: 'small fw-bold' }, 'Price Modifier (€)'),
+                        el('input', { type: 'text', class: 'form-control form-control-sm variant-price-mod', value: prefill.price_modifier_cents ? (prefill.price_modifier_cents / 100).toFixed(2) : '0.00' })
+                    )
+                ),
+                el('div', { class: 'mb-3' },
+                    el('label', { class: 'small fw-bold mb-1' }, 'Variant Images'),
+                    el('div', { class: 'variant-images row g-2' })
+                ),
+                el('div', { class: 'd-flex gap-2' },
+                    el('button', { class: 'btn btn-sm btn-outline-secondary add-variant-image', type: 'button' }, 'Add Variant Image'),
+                    el('button', { class: 'btn btn-sm btn-outline-danger ms-auto remove-variant', type: 'button' }, 'Remove Variant')
+                )
+            )
+        )
+      );
 
-      const sku = el('input', { type: 'text', class: 'form-input variant-sku', placeholder: 'Variant SKU', value: prefill.sku || '' });
-      const color = el('input', { type: 'text', class: 'form-input variant-color', placeholder: 'Color', value: prefill.color_name || '' });
-      const size = el('input', { type: 'text', class: 'form-input variant-size', placeholder: 'Size', value: prefill.size || '' });
-      const stock = el('input', { type: 'number', class: 'form-input variant-stock', placeholder: 'Stock', value: prefill.stock_quantity || 0 });
-      const priceMod = el('input', { type: 'text', class: 'form-input variant-price-mod', placeholder: 'Price modifier (e.g. 1.50)', value: prefill.price_modifier_cents ? (prefill.price_modifier_cents / 100).toFixed(2) : '0.00' });
-
-      // container for variant image rows
-      const vImgs = el('div', { class: 'variant-images' });
-
-      // function to add one variant-image row (used for both prefill and "Add image" button)
+      const vImgs = $('.variant-images', accordionItem);
       function addVariantImageRow(url = '', alt = '', order = 0) {
-        const r = el('div', { class: 'variant-image-row', 'data-role': 'variant-image', style: 'display:flex; gap:8px; margin-bottom:4px;' },
-          el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url }),
-          el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
-          el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
-          el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
-        );
-        r.querySelector('button').addEventListener('click', () => r.remove());
-        vImgs.appendChild(r);
+          const vcol = el('div', { class: 'col-12', 'data-role': 'variant-image' },
+              el('div', { class: 'd-flex gap-2' },
+                  el('input', { type: 'text', class: 'form-control form-control-sm img-url', placeholder: 'URL', value: url }),
+                  el('input', { type: 'text', class: 'form-control form-control-sm img-alt', placeholder: 'Alt', value: alt }),
+                  el('input', { type: 'number', class: 'form-control form-control-sm img-order', style: 'width:60px', value: order }),
+                  el('button', { class: 'btn btn-sm btn-outline-danger', type: 'button', html: '&times;' })
+              )
+          );
+          vcol.querySelector('button').addEventListener('click', () => vcol.remove());
+          vImgs.appendChild(vcol);
       }
 
-      // If prefill contains images, render them
-      if (Array.isArray(prefill.images) && prefill.images.length) {
-        prefill.images.forEach(img => {
-          const url = img.url || '';
-          const alt = img.alt_text || img.alt || '';
-          const order = img.display_order != null ? img.display_order : (img.order != null ? img.order : 0);
-          addVariantImageRow(url, alt, order);
-        });
+      if (Array.isArray(prefill.images)) {
+          prefill.images.forEach(img => addVariantImageRow(img.url, img.alt_text || '', img.display_order || 0));
       }
 
-      // "Add variant image" button
-      const addImg = el('button', { class: 'btn', type: 'button' }, 'Add Variant Image');
-      addImg.addEventListener('click', () => addVariantImageRow());
+      $('.add-variant-image', accordionItem).addEventListener('click', () => addVariantImageRow());
+      $('.remove-variant', accordionItem).addEventListener('click', () => accordionItem.remove());
 
-      const duplicateBtn = el('button', { class: 'btn btn-outline-primary', type: 'button', style: 'margin-right: 8px;' }, 'Duplicate');
-      duplicateBtn.addEventListener('click', () => {
-        const currentPrefill = {
-          sku: sku.value + '-duplicate',
-          color_name: color.value,
-          size: size.value,
-          stock_quantity: parseInt(stock.value || '0'),
-          price_modifier_cents: parsePriceToCents(priceMod.value),
-          images: []
-        };
-        $all('[data-role="variant-image"]', wrapper).forEach(imgRow => {
-          currentPrefill.images.push({
-            url: imgRow.querySelector('.img-url').value,
-            alt_text: imgRow.querySelector('.img-alt').value,
-            display_order: parseInt(imgRow.querySelector('.img-order').value || '0')
-          });
-        });
-        addVariantRow(currentPrefill);
-      });
-
-      const removeBtn = el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove Variant');
-      removeBtn.addEventListener('click', () => wrapper.remove());
-
-      // assemble wrapper
-      wrapper.appendChild(el('label', {}, 'Variant SKU')); wrapper.appendChild(sku);
-      wrapper.appendChild(el('label', {}, 'Color')); wrapper.appendChild(color);
-      wrapper.appendChild(el('label', {}, 'Size')); wrapper.appendChild(size);
-      wrapper.appendChild(el('label', {}, 'Stock quantity')); wrapper.appendChild(stock);
-      wrapper.appendChild(el('label', {}, 'Price modifier in USD')); wrapper.appendChild(priceMod);
-      wrapper.appendChild(vImgs);
-      wrapper.appendChild(addImg);
-      wrapper.appendChild(duplicateBtn);
-      wrapper.appendChild(removeBtn);
-
-      variantsContainer.appendChild(wrapper);
+      variantsContainer.appendChild(accordionItem);
     }
 
     $('#add-product-image').addEventListener('click', () => addProductImageRow());
     $('#add-variant').addEventListener('click', () => addVariantRow());
 
-    addProductImageRow();
-    addVariantRow();
-
     // Load products list
     async function loadProducts() {
-      const res = await fetch('/api/products');
+      const res = await fetch('/api/admin/products');
+      if (!res.ok) return;
       const data = await res.json();
+      const products = data.products || [];
       productList.innerHTML = '';
-      // support both { products: [...] } and direct array
-      const list = Array.isArray(data) ? data : (data.products || []);
-      list.forEach(p => {
-        const item = el('div', { class: 'product-list-item', style: 'padding:6px; border-bottom:1px solid #eee; cursor:pointer;' }, `${p.name} (${p.product_sku})`);
-        item.addEventListener('click', () => loadProduct(p.product_sku)); // use SKU!
+      products.forEach(p => {
+        const item = el('button', { class: 'list-group-item list-group-item-action' }, `${p.name} (${p.product_sku})`);
+        item.addEventListener('click', () => loadProduct(p.product_sku));
         productList.appendChild(item);
       });
     }
 
     // Load single product by SKU
     async function loadProduct(sku) {
-      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`);
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(sku)}`);
       if (!res.ok) return showFeedback(`Failed to load product ${sku}`, 'error');
       const p = await res.json();
       $('#product_sku').value = p.product_sku;
       $('#name').value = p.name;
-      $('#category').value = p.category;
+      $('#category').value = p.category || '';
       $('#base_price').value = (p.base_price_cents / 100).toFixed(2);
-      $('#description').value = p.description;
+      $('#short_description').value = p.short_description || '';
+      $('#description').value = p.description || '';
+      $('#product_details').value = p.product_details || '';
+      $('#tag1').value = p.tag1 || '';
+      $('#tag2').value = p.tag2 || '';
+      $('#tag3').value = p.tag3 || '';
+      $('#related_products').value = Array.isArray(p.related_products) ? p.related_products.join(', ') : '';
+      $('#proposed_products').value = Array.isArray(p.proposed_products) ? p.proposed_products.join(', ') : '';
+
       imagesContainer.innerHTML = '';
-      (p.images || []).forEach(img => addProductImageRow(img.url, img.alt_text || img.alt || '', img.display_order || img.order || 0));
+      (p.images || []).forEach(img => addProductImageRow(img.url, img.alt_text || '', img.display_order || 0));
+
       variantsContainer.innerHTML = '';
       (p.variants || []).forEach(v => addVariantRow(v));
-      saveBtn.dataset.editSku = p.product_sku; // store SKU
+
+      saveBtn.dataset.editSku = p.product_sku;
+      $('#editor-title').textContent = 'Edit Product: ' + p.name;
       showFeedback(`Loaded product ${p.name}`);
     }
 
@@ -177,7 +189,14 @@
         product_sku: $('#product_sku').value.trim(),
         name: $('#name').value.trim(),
         category: $('#category').value.trim(),
+        short_description: $('#short_description').value.trim(),
         description: $('#description').value.trim(),
+        product_details: $('#product_details').value.trim(),
+        tag1: $('#tag1').value.trim(),
+        tag2: $('#tag2').value.trim(),
+        tag3: $('#tag3').value.trim(),
+        related_products: $('#related_products').value.split(',').map(s => s.trim()).filter(Boolean),
+        proposed_products: $('#proposed_products').value.split(',').map(s => s.trim()).filter(Boolean),
         base_price_cents: parsePriceToCents($('#base_price').value),
         images: [],
         variants: []
@@ -218,14 +237,15 @@
 
       const editSku = saveBtn.dataset.editSku;
       const method = editSku ? 'PUT' : 'POST';
-      const url = editSku ? `/api/products/${encodeURIComponent(editSku)}` : '/api/products';
+      const url = editSku ? `/api/admin/products/${encodeURIComponent(editSku)}` : '/api/admin/products';
 
       try {
         const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await res.json();
         if (res.ok) {
-          showFeedback(`Product ${data.name} saved.`, 'success');
+          showFeedback(`Product saved.`, 'success');
           loadProducts();
+          saveBtn.dataset.editSku = data.product_sku;
         } else {
           showFeedback(data.error || 'Save failed', 'error');
         }
@@ -240,28 +260,28 @@
       const sku = saveBtn.dataset.editSku;
       if (!sku) return showFeedback('No product selected', 'error');
       if (!confirm('Delete this product?')) return;
-      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(sku)}`, { method: 'DELETE' });
       if (res.ok) {
         showFeedback('Deleted', 'success');
         loadProducts();
-        // reset editor
-        ['product_sku', 'name', 'category', 'base_price', 'description'].forEach(id => $(`#${id}`).value = '');
-        imagesContainer.innerHTML = '';
-        variantsContainer.innerHTML = '';
-        saveBtn.dataset.editSku = '';
+        resetEditor();
       } else showFeedback('Delete failed', 'error');
     });
 
-    // New product button
-    if (newBtn) newBtn.addEventListener('click', () => {
-      ['product_sku', 'name', 'category', 'base_price', 'description'].forEach(id => $(`#${id}`).value = '');
+    function resetEditor() {
+      ['product_sku', 'name', 'category', 'base_price', 'short_description', 'description', 'product_details', 'tag1', 'tag2', 'tag3', 'related_products', 'proposed_products'].forEach(id => {
+          const target = $(`#${id}`);
+          if (target) target.value = '';
+      });
       imagesContainer.innerHTML = '';
       variantsContainer.innerHTML = '';
+      saveBtn.dataset.editSku = '';
+      $('#editor-title').textContent = 'Create New Product';
       addProductImageRow();
       addVariantRow();
-      saveBtn.dataset.editSku = '';
-      showFeedback('New product');
-    });
+    }
+
+    newBtn.addEventListener('click', resetEditor);
 
     // Initial load
     loadProducts();
