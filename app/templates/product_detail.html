@@ -32,10 +32,14 @@
                 </ol>
             </nav>
 
-            <h1 id="product-name" class="display-5 fw-bold mb-2">Loading...</h1>
-            <p id="product-price" class="h3 text-primary fw-bold mb-4">$0.00</p>
+            <h1 id="product-name" class="h3 fw-bold mb-2">Loading...</h1>
+            <p id="product-price" class="h4 text-primary fw-bold mb-3">$0.00</p>
 
-            <div id="product-description" class="text-muted mb-5 lead"></div>
+            <div id="product-short-description" class="text-muted mb-3 lead" style="font-size: 1.1rem;"></div>
+
+            <div id="product-tags" class="d-flex flex-wrap gap-2 mb-4">
+                <!-- Tags injected by product.js -->
+            </div>
 
             <hr class="my-4">
 
@@ -73,6 +77,14 @@
             <div id="variant-message" class="mt-3 small fw-bold text-danger"></div>
 
             <div class="mt-5 border-top pt-4">
+                <h3 class="h6 fw-bold mb-3 text-uppercase text-muted">Product Details</h3>
+                <div id="product-details" class="text-muted small mb-4" style="white-space: pre-line;"></div>
+
+                <h3 class="h6 fw-bold mb-3 text-uppercase text-muted">Description</h3>
+                <div id="product-description" class="text-muted small mb-4"></div>
+            </div>
+
+            <div class="mt-5 border-top pt-4">
                 <div class="d-flex align-items-center mb-3">
                     <i class="bi bi-truck fs-4 me-3 text-muted"></i>
                     <div>
@@ -88,6 +100,22 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    <div class="mt-5 pt-5 border-top">
+        <h2 class="h4 fw-bold mb-4 text-center">Deals on related products</h2>
+        <div id="related-products-list" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4 justify-content-center">
+            <!-- Related products will be injected here -->
+        </div>
+    </div>
+
+    <!-- Similar Designs -->
+    <div class="mt-5 pt-5 border-top">
+        <h2 class="h4 fw-bold mb-4 text-center">Similar Designs</h2>
+        <div id="proposed-products-list" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4 justify-content-center">
+            <!-- Proposed products will be injected here -->
         </div>
     </div>
 </div>

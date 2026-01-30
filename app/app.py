@@ -179,10 +179,17 @@ def create_product_data(product_key):
     sku = product_key
     name = f"T-Shirt {product_key.upper()}"
     category = "Graphic Tees"
-    description = f"Comfortable cotton tee — design {product_key.upper()}."
+    short_description = f"Stylish {name} for every occasion."
+    description = f"This {name} is made from high-quality cotton, providing both comfort and durability. Perfect for casual wear or as a gift."
+    product_details = f"Material: 100% Cotton\nFit: Regular Fit\nCare: Machine wash cold\nDesign: {product_key.upper()} Graphic"
     base_price_usd = BASE_PRICES_USD.get(product_key, 19.99)
     base_price_cents = usd_to_cents(base_price_usd)
     product_image_url = f"{BASE_IMAGE_URL}/{product_key}/a-1.webp"
+
+    # Simple logic for related and proposed products
+    idx = int(product_key.split('-')[1])
+    related = [f"p-{(idx % 4) + 1}", f"p-{((idx + 1) % 4) + 1}"]
+    proposed = [f"p-{((idx + 2) % 4) + 1}"]
 
     variants = []
     for color in COLORS:
@@ -223,7 +230,14 @@ def create_product_data(product_key):
         "product_sku": sku,
         "name": name,
         "category": category,
+        "short_description": short_description,
         "description": description,
+        "product_details": product_details,
+        "related_products": related,
+        "proposed_products": proposed,
+        "tag1": "New",
+        "tag2": "Summer",
+        "tag3": "Cotton",
         "base_price_cents": base_price_cents,
         "image_url": product_image_url,
         "images": product_images,
@@ -241,8 +255,15 @@ def insert_product(session, pdata):
     product = Product(
         product_sku=sku,
         name=pdata["name"],
+        short_description=pdata.get("short_description"),
         description=pdata.get("description"),
+        product_details=pdata.get("product_details"),
         category=pdata.get("category"),
+        related_products=pdata.get("related_products"),
+        proposed_products=pdata.get("proposed_products"),
+        tag1=pdata.get("tag1"),
+        tag2=pdata.get("tag2"),
+        tag3=pdata.get("tag3"),
         base_price_cents=int(pdata["base_price_cents"])
     )
     session.add(product)
@@ -299,8 +320,15 @@ def serialize_product(product):
     return {
         "product_sku": product.product_sku,
         "name": product.name,
+        "short_description": product.short_description,
         "description": product.description,
+        "product_details": product.product_details,
         "category": product.category,
+        "related_products": product.related_products,
+        "proposed_products": product.proposed_products,
+        "tag1": product.tag1,
+        "tag2": product.tag2,
+        "tag3": product.tag3,
         "base_price_cents": product.base_price_cents,
         "images": [serialize_image(img) for img in product.images],
         "variants": [serialize_variant(var) for var in product.variants]
@@ -698,14 +726,13 @@ def admin_page():
 # Admin product CRUD API
 # -------------------------
 
-# List all products (admin)
+# Admin: List all products
 @app.route('/api/admin/products', methods=['GET'])
 def admin_list_products():
-    # returns all products (no pagination by default) — could add pagination/filters later
     products = Product.query.options(joinedload(Product.images), joinedload(Product.variants)).order_by(Product.name).all()
-    return jsonify([serialize_product(p) for p in products]), 200
+    return jsonify({"products": [serialize_product(p) for p in products]}), 200
 
-# Get single product for editing (admin)
+# Admin: Get single product
 @app.route('/api/admin/products/<string:sku>', methods=['GET'])
 def admin_get_product(sku):
     product = Product.query.options(joinedload(Product.images), joinedload(Product.variants).joinedload(Variant.images)).filter_by(product_sku=sku).first_or_404()
@@ -722,8 +749,15 @@ def admin_update_product(sku):
     try:
         # Basic fields
         product.name = data.get('name', product.name)
+        product.short_description = data.get('short_description', product.short_description)
         product.description = data.get('description', product.description)
+        product.product_details = data.get('product_details', product.product_details)
         product.category = data.get('category', product.category)
+        product.related_products = data.get('related_products', product.related_products)
+        product.proposed_products = data.get('proposed_products', product.proposed_products)
+        product.tag1 = data.get('tag1', product.tag1)
+        product.tag2 = data.get('tag2', product.tag2)
+        product.tag3 = data.get('tag3', product.tag3)
         product.base_price_cents = int(data.get('base_price_cents', product.base_price_cents or 0))
 
         # Replace product images if images provided
@@ -732,7 +766,7 @@ def admin_update_product(sku):
             for idx, img in enumerate(data.get('images', [])):
                 url = img.get('url') if isinstance(img, dict) else str(img)
                 alt = img.get('alt_text') if isinstance(img, dict) else ''
-                order = int(img.get('order', idx)) if isinstance(img, dict) else idx
+                order = int(img.get('display_order', img.get('order', idx)) if isinstance(img, dict) else idx)
                 pimg = ProductImage(product_id=product.id, url=url, alt_text=alt, display_order=order)
                 db.session.add(pimg)
 
@@ -782,7 +816,7 @@ def admin_update_product(sku):
                     for idx, vimg in enumerate(v_data.get('images', []) or []):
                         vurl = vimg.get('url') if isinstance(vimg, dict) else str(vimg)
                         valt = vimg.get('alt_text') if isinstance(vimg, dict) else ''
-                        vorder = int(vimg.get('order', idx)) if isinstance(vimg, dict) else idx
+                        vorder = int(vimg.get('display_order', vimg.get('order', idx)) if isinstance(vimg, dict) else idx)
                         vi = VariantImage(variant_id=variant.id, url=vurl, alt_text=valt, display_order=vorder)
                         db.session.add(vi)
 
@@ -802,7 +836,7 @@ def admin_update_product(sku):
                     for idx, vimg in enumerate(v_data.get('images', []) or []):
                         vurl = vimg.get('url') if isinstance(vimg, dict) else str(vimg)
                         valt = vimg.get('alt_text') if isinstance(vimg, dict) else ''
-                        vorder = int(vimg.get('order', idx)) if isinstance(vimg, dict) else idx
+                        vorder = int(vimg.get('display_order', vimg.get('order', idx)) if isinstance(vimg, dict) else idx)
                         vi = VariantImage(variant_id=variant.id, url=vurl, alt_text=valt, display_order=vorder)
                         db.session.add(vi)
 
@@ -830,10 +864,10 @@ def admin_update_product(sku):
         return jsonify({"error": "Failed to update product", "details": str(e)}), 500
 
 
-    except Exception as e:
-        db.session.rollback()
-        logger.exception("Admin update failed")
-        return jsonify({"error": "Failed to update product", "details": str(e)}), 500
+# Admin: Create product
+@app.route('/api/admin/products', methods=['POST'])
+def admin_create_product():
+    return create_product()
 
 # Delete a product (admin)
 @app.route('/api/admin/products/<string:sku>', methods=['DELETE'])
@@ -873,8 +907,15 @@ def create_product():
         product = Product(
             product_sku=data['product_sku'],
             name=data['name'],
+            short_description=data.get('short_description'),
             description=data.get('description'),
+            product_details=data.get('product_details'),
             category=data.get('category'),
+            related_products=data.get('related_products'),
+            proposed_products=data.get('proposed_products'),
+            tag1=data.get('tag1'),
+            tag2=data.get('tag2'),
+            tag3=data.get('tag3'),
             base_price_cents=int(data['base_price_cents'])
         )
         db.session.add(product)
@@ -991,8 +1032,15 @@ def update_product(product_sku):
             # Update product top-level fields
             product.product_sku = data['product_sku']
             product.name = data['name']
+            product.short_description = data.get('short_description')
             product.description = data.get('description')
+            product.product_details = data.get('product_details')
             product.category = data.get('category')
+            product.related_products = data.get('related_products')
+            product.proposed_products = data.get('proposed_products')
+            product.tag1 = data.get('tag1')
+            product.tag2 = data.get('tag2')
+            product.tag3 = data.get('tag3')
             product.base_price_cents = int(data['base_price_cents'])
 
             db.session.add(product)

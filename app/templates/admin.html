@@ -65,9 +65,47 @@
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold">Description</label>
-                            <textarea id="description" class="form-control" rows="3" placeholder="Description"></textarea>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Short Description</label>
+                            <textarea id="short_description" class="form-control" rows="2" placeholder="Brief summary (used as lead text)"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Full Description</label>
+                            <textarea id="description" class="form-control" rows="4" placeholder="Detailed product story"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Product Details</label>
+                            <textarea id="product_details" class="form-control" rows="4" placeholder="Material: 100% Cotton&#10;Fit: Regular Fit&#10;Care: Machine wash cold"></textarea>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Tag 1</label>
+                                <input id="tag1" type="text" placeholder="e.g. New" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Tag 2</label>
+                                <input id="tag2" type="text" placeholder="e.g. Summer" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Tag 3</label>
+                                <input id="tag3" type="text" placeholder="e.g. Cotton" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Related Product SKUs</label>
+                                <input id="related_products" type="text" placeholder="SKU-1, SKU-2" class="form-control">
+                                <div class="form-text">Comma separated list of SKUs for "Deals on related products"</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Proposed Product SKUs</label>
+                                <input id="proposed_products" type="text" placeholder="SKU-3, SKU-4" class="form-control">
+                                <div class="form-text">Comma separated list of SKUs for "Similar Designs"</div>
+                            </div>
                         </div>
 
                         <div class="mb-4">
