@@ -22,6 +22,8 @@
   const qtyInput = $('#qty-input');
   const addToCartBtn = $('#add-to-cart');
   const variantMessage = $('#variant-message');
+  const prevBtn = $('#prev-image');
+  const nextBtn = $('#next-image');
 
   // New helper for product cards
   function createProductCard(p) {
@@ -49,29 +51,26 @@
     }
     const listContainer = $(listId);
     listContainer.innerHTML = '';
-    let hasItems = false;
-    for (const sku of skus) {
-      if (!sku) continue;
-      console.log(`Fetching related product: ${sku}`);
-      try {
-        const res = await fetch(`/api/products/${encodeURIComponent(sku)}`);
-        if (res.ok) {
-          const p = await res.json();
-          console.log(`Successfully fetched ${sku}`);
-          listContainer.appendChild(createProductCard(p));
-          hasItems = true;
-        } else {
-          console.warn(`Failed to fetch ${sku}: ${res.status}`);
+
+    try {
+      // Use batch endpoint for efficiency
+      const queryParams = skus.filter(s => !!s).map(s => `sku=${encodeURIComponent(s)}`).join('&');
+      const res = await fetch(`/api/products/batch?${queryParams}`);
+      if (res.ok) {
+        const products = await res.json();
+        if (products && products.length > 0) {
+          products.forEach(p => {
+            listContainer.appendChild(createProductCard(p));
+          });
+          $(sectionId).classList.remove('d-none');
+          return;
         }
-      } catch (e) {
-        console.error(`Error fetching SKU ${sku}:`, e);
       }
+    } catch (e) {
+      console.error(`Error fetching batch SKUs:`, e);
     }
-    if (hasItems) {
-      $(sectionId).classList.remove('d-none');
-    } else {
-      $(sectionId).classList.add('d-none');
-    }
+
+    $(sectionId).classList.add('d-none');
   }
 
   function renderTags(p) {
@@ -136,9 +135,14 @@
     thumbRail.innerHTML = '';
     if (!images || images.length === 0) {
       thumbRail.style.display = 'none';
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
       return;
     }
     thumbRail.style.display = '';
+
+    if (prevBtn) prevBtn.style.display = images.length > 1 ? '' : 'none';
+    if (nextBtn) nextBtn.style.display = images.length > 1 ? '' : 'none';
     images.forEach((img, idx) => {
       const t = createThumb(img, idx);
       thumbRail.appendChild(t);
@@ -328,6 +332,26 @@
       }
 
       addToCartBtn.addEventListener('click', addToCart);
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          if (!currentGallery || currentGallery.length < 2) return;
+          const thumbs = $$('.thumb-item', thumbRail);
+          const activeIndex = thumbs.findIndex(t => t.classList.contains(SELECTED_OUTLINE_STYLE));
+          const newIndex = (activeIndex - 1 + currentGallery.length) % currentGallery.length;
+          setActiveImage(newIndex);
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          if (!currentGallery || currentGallery.length < 2) return;
+          const thumbs = $$('.thumb-item', thumbRail);
+          const activeIndex = thumbs.findIndex(t => t.classList.contains(SELECTED_OUTLINE_STYLE));
+          const newIndex = (activeIndex + 1) % currentGallery.length;
+          setActiveImage(newIndex);
+        });
+      }
 
       // keyboard accessibility: left/right arrows cycle thumbs
       document.addEventListener('keydown', (e) => {

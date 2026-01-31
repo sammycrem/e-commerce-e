@@ -412,15 +412,16 @@ def setup_database(app):
             db.session.add(product)
             db.session.flush()
 
-            variant = Variant(
-                product_id=product.id,
-                sku='SAMPLE-SKU-VAR',
-                color_name='Red',
-                size='M',
-                stock_quantity=10,
-                price_modifier_cents=0
-            )
-            db.session.add(variant)
+            if not Variant.query.filter_by(sku='SAMPLE-SKU-VAR').first():
+                variant = Variant(
+                    product_id=product.id,
+                    sku='SAMPLE-SKU-VAR',
+                    color_name='Red',
+                    size='M',
+                    stock_quantity=10,
+                    price_modifier_cents=0
+                )
+                db.session.add(variant)
             db.session.commit()
 
         # --- Seeding playground data ---
@@ -429,6 +430,8 @@ def setup_database(app):
         try:
             for i in range(1, PRODUCT_COUNT + 1):
                 key = f"p-{i}"
+                if Product.query.filter_by(product_sku=key).first():
+                    continue
                 pdata = create_product_data(key)
                 if RECREATE_IF_EXISTS:
                     safe_delete_product_by_sku(db.session, pdata["product_sku"])
@@ -1009,6 +1012,20 @@ def get_product(sku):
         joinedload(Product.variants).joinedload(Variant.images)
     ).filter_by(product_sku=sku).first_or_404()
     return jsonify(serialize_product(product)), 200
+
+@app.route('/api/products/batch', methods=['GET'])
+def get_products_batch():
+    skus = request.args.getlist('sku')
+    if not skus:
+        return jsonify([]), 200
+    products = Product.query.options(
+        joinedload(Product.images),
+        joinedload(Product.variants)
+    ).filter(Product.product_sku.in_(skus)).all()
+    # Sort them in the same order as requested SKUs
+    product_map = {p.product_sku: serialize_product(p) for p in products}
+    result = [product_map[sku] for sku in skus if sku in product_map]
+    return jsonify(result), 200
 
 
 
