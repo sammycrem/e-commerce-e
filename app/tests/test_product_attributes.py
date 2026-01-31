@@ -40,6 +40,7 @@ def test_product_new_attributes(client):
     assert response.status_code == 200
     data = response.get_json()
     assert data['tag1'] == "Tag1"
+    assert data['variants'][0]['price_modifier_cents'] == 500
     assert data['variants'][0]['final_price_cents'] == 3000
 
 def test_variant_price_modifier(client, app):

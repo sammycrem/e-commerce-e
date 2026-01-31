@@ -312,6 +312,7 @@ def serialize_variant(variant):
         "color_name": variant.color_name,
         "size": variant.size,
         "stock_quantity": variant.stock_quantity,
+        "price_modifier_cents": variant.price_modifier_cents,
         "final_price_cents": int((variant.product.base_price_cents or 0) + (variant.price_modifier_cents or 0)),
         "images": [serialize_image(img) for img in variant.images]
     }
