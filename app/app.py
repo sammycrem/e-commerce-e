@@ -331,6 +331,8 @@ def serialize_product(product):
         "tag1": product.tag1,
         "tag2": product.tag2,
         "tag3": product.tag3,
+        "weight_grams": product.weight_grams,
+        "dimensions_json": product.dimensions_json or {"length": 0, "width": 0, "height": 0},
         "images": [serialize_image(img) for img in product.images],
         "variants": [serialize_variant(var) for var in product.variants]
     }
@@ -761,6 +763,8 @@ def admin_update_product(sku):
         product.tag3 = data.get('tag3', product.tag3)
         product.category = data.get('category', product.category)
         product.base_price_cents = int(data.get('base_price_cents', product.base_price_cents or 0))
+        product.weight_grams = data.get('weight_grams', product.weight_grams)
+        product.dimensions_json = data.get('dimensions_json', product.dimensions_json)
 
         # Replace product images if images provided
         if 'images' in data:
@@ -912,7 +916,9 @@ def create_product():
             tag2=data.get('tag2'),
             tag3=data.get('tag3'),
             category=data.get('category'),
-            base_price_cents=int(data['base_price_cents'])
+            base_price_cents=int(data['base_price_cents']),
+            weight_grams=data.get('weight_grams'),
+            dimensions_json=data.get('dimensions_json')
         )
         db.session.add(product)
         db.session.flush()  # get product.id
@@ -1038,6 +1044,8 @@ def update_product(product_sku):
             product.tag3 = data.get('tag3')
             product.category = data.get('category')
             product.base_price_cents = int(data['base_price_cents'])
+            product.weight_grams = data.get('weight_grams')
+            product.dimensions_json = data.get('dimensions_json')
 
             db.session.add(product)
             db.session.flush()  # ensure product.id is present

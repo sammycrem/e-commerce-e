@@ -875,9 +875,10 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
         elif shipping_method == 'economic':
             shipping_cost_cents = int(shipping_cost_cents * 0.9)
 
-        # apply free shipping threshold if configured (after modifiers? Usually standard shipping is free, express might not be)
+        # apply free shipping threshold if configured
+        # Improvement: Free shipping only applies to standard shipping
         try:
-            if zone.free_shipping_threshold_cents is not None and isinstance(zone.free_shipping_threshold_cents, int):
+            if shipping_method == 'standard' and zone.free_shipping_threshold_cents is not None and isinstance(zone.free_shipping_threshold_cents, int):
                 if subtotal_after_discount >= int(zone.free_shipping_threshold_cents):
                     shipping_cost_cents = 0
         except Exception:

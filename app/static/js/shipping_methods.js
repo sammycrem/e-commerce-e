@@ -59,17 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.getElementById('proceed-to-checkout').addEventListener('click', (e) => {
-        e.preventDefault();
-        const shippingMethod = sessionStorage.getItem('shipping_method');
-        const shippingCost = sessionStorage.getItem('shipping_cost');
-        const total = sessionStorage.getItem('total');
-
-        console.log('Shipping Method:', shippingMethod);
-        console.log('Shipping Cost:', shippingCost);
-        console.log('Total:', total);
-
-        // For now, just log the values. In the future, this would navigate to the payment page.
-        alert(`Shipping Method: ${shippingMethod}\nShipping Cost: €${shippingCost}\nTotal: €${total}`);
-    });
+    // Removed preventDefault to allow form submission
+    const proceedBtn = document.getElementById('proceed-to-checkout');
+    if (proceedBtn) {
+        proceedBtn.addEventListener('click', (e) => {
+            const shippingMethod = sessionStorage.getItem('shipping_method');
+            console.log('Proceeding with Shipping Method:', shippingMethod);
+        });
+    }
 });

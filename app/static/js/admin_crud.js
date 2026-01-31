@@ -214,6 +214,10 @@
       $('#tag1').value = p.tag1 || '';
       $('#tag2').value = p.tag2 || '';
       $('#tag3').value = p.tag3 || '';
+      $('#weight_grams').value = p.weight_grams || 0;
+      $('#length').value = p.dimensions_json?.length || 0;
+      $('#width').value = p.dimensions_json?.width || 0;
+      $('#height').value = p.dimensions_json?.height || 0;
       imagesContainer.innerHTML = '';
       (p.images || []).forEach(img => addProductImageRow(img.url, img.alt_text || img.alt || '', img.display_order || img.order || 0));
       variantsContainer.innerHTML = '';
@@ -236,6 +240,12 @@
         tag1: $('#tag1').value.trim(),
         tag2: $('#tag2').value.trim(),
         tag3: $('#tag3').value.trim(),
+        weight_grams: parseInt($('#weight_grams').value || '0'),
+        dimensions_json: {
+          length: parseInt($('#length').value || '0'),
+          width: parseInt($('#width').value || '0'),
+          height: parseInt($('#height').value || '0')
+        },
         base_price_cents: parsePriceToCents($('#base_price').value),
         images: [],
         variants: []
@@ -303,7 +313,7 @@
         showFeedback('Deleted', 'success');
         loadProducts();
         // reset editor
-        ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3'].forEach(id => $(`#${id}`).value = '');
+        ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3', 'weight_grams', 'length', 'width', 'height'].forEach(id => $(`#${id}`).value = '');
         imagesContainer.innerHTML = '';
         variantsContainer.innerHTML = '';
         saveBtn.dataset.editSku = '';
@@ -312,7 +322,7 @@
 
     // New product button
     if (newBtn) newBtn.addEventListener('click', () => {
-      ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3'].forEach(id => $(`#${id}`).value = '');
+      ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3', 'weight_grams', 'length', 'width', 'height'].forEach(id => $(`#${id}`).value = '');
       imagesContainer.innerHTML = '';
       variantsContainer.innerHTML = '';
       addProductImageRow();
