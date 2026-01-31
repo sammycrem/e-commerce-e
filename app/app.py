@@ -224,6 +224,13 @@ def create_product_data(product_key):
         "name": name,
         "category": category,
         "description": description,
+        "short_description": f"Short desc for {sku}",
+        "product_details": f"Detailed info for {sku}",
+        "related_products": [],
+        "proposed_products": [],
+        "tag1": "tag1",
+        "tag2": "tag2",
+        "tag3": "tag3",
         "base_price_cents": base_price_cents,
         "image_url": product_image_url,
         "images": product_images,
@@ -242,6 +249,13 @@ def insert_product(session, pdata):
         product_sku=sku,
         name=pdata["name"],
         description=pdata.get("description"),
+        short_description=pdata.get("short_description"),
+        product_details=pdata.get("product_details"),
+        related_products=pdata.get("related_products"),
+        proposed_products=pdata.get("proposed_products"),
+        tag1=pdata.get("tag1"),
+        tag2=pdata.get("tag2"),
+        tag3=pdata.get("tag3"),
         category=pdata.get("category"),
         base_price_cents=int(pdata["base_price_cents"])
     )
@@ -302,6 +316,13 @@ def serialize_product(product):
         "description": product.description,
         "category": product.category,
         "base_price_cents": product.base_price_cents,
+        "short_description": product.short_description,
+        "product_details": product.product_details,
+        "related_products": product.related_products or [],
+        "proposed_products": product.proposed_products or [],
+        "tag1": product.tag1,
+        "tag2": product.tag2,
+        "tag3": product.tag3,
         "images": [serialize_image(img) for img in product.images],
         "variants": [serialize_variant(var) for var in product.variants]
     }
@@ -723,6 +744,13 @@ def admin_update_product(sku):
         # Basic fields
         product.name = data.get('name', product.name)
         product.description = data.get('description', product.description)
+        product.short_description = data.get('short_description', product.short_description)
+        product.product_details = data.get('product_details', product.product_details)
+        product.related_products = data.get('related_products', product.related_products)
+        product.proposed_products = data.get('proposed_products', product.proposed_products)
+        product.tag1 = data.get('tag1', product.tag1)
+        product.tag2 = data.get('tag2', product.tag2)
+        product.tag3 = data.get('tag3', product.tag3)
         product.category = data.get('category', product.category)
         product.base_price_cents = int(data.get('base_price_cents', product.base_price_cents or 0))
 
@@ -874,6 +902,13 @@ def create_product():
             product_sku=data['product_sku'],
             name=data['name'],
             description=data.get('description'),
+            short_description=data.get('short_description'),
+            product_details=data.get('product_details'),
+            related_products=data.get('related_products'),
+            proposed_products=data.get('proposed_products'),
+            tag1=data.get('tag1'),
+            tag2=data.get('tag2'),
+            tag3=data.get('tag3'),
             category=data.get('category'),
             base_price_cents=int(data['base_price_cents'])
         )
@@ -992,6 +1027,13 @@ def update_product(product_sku):
             product.product_sku = data['product_sku']
             product.name = data['name']
             product.description = data.get('description')
+            product.short_description = data.get('short_description')
+            product.product_details = data.get('product_details')
+            product.related_products = data.get('related_products')
+            product.proposed_products = data.get('proposed_products')
+            product.tag1 = data.get('tag1')
+            product.tag2 = data.get('tag2')
+            product.tag3 = data.get('tag3')
             product.category = data.get('category')
             product.base_price_cents = int(data['base_price_cents'])
 

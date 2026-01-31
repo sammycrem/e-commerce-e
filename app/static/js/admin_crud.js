@@ -162,7 +162,14 @@
       $('#name').value = p.name;
       $('#category').value = p.category;
       $('#base_price').value = (p.base_price_cents / 100).toFixed(2);
-      $('#description').value = p.description;
+      $('#description').value = p.description || '';
+      $('#short_description').value = p.short_description || '';
+      $('#product_details').value = p.product_details || '';
+      $('#related_products').value = (p.related_products || []).join(', ');
+      $('#proposed_products').value = (p.proposed_products || []).join(', ');
+      $('#tag1').value = p.tag1 || '';
+      $('#tag2').value = p.tag2 || '';
+      $('#tag3').value = p.tag3 || '';
       imagesContainer.innerHTML = '';
       (p.images || []).forEach(img => addProductImageRow(img.url, img.alt_text || img.alt || '', img.display_order || img.order || 0));
       variantsContainer.innerHTML = '';
@@ -178,6 +185,13 @@
         name: $('#name').value.trim(),
         category: $('#category').value.trim(),
         description: $('#description').value.trim(),
+        short_description: $('#short_description').value.trim(),
+        product_details: $('#product_details').value.trim(),
+        related_products: $('#related_products').value.split(',').map(s => s.trim()).filter(s => s),
+        proposed_products: $('#proposed_products').value.split(',').map(s => s.trim()).filter(s => s),
+        tag1: $('#tag1').value.trim(),
+        tag2: $('#tag2').value.trim(),
+        tag3: $('#tag3').value.trim(),
         base_price_cents: parsePriceToCents($('#base_price').value),
         images: [],
         variants: []
@@ -245,7 +259,7 @@
         showFeedback('Deleted', 'success');
         loadProducts();
         // reset editor
-        ['product_sku', 'name', 'category', 'base_price', 'description'].forEach(id => $(`#${id}`).value = '');
+        ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3'].forEach(id => $(`#${id}`).value = '');
         imagesContainer.innerHTML = '';
         variantsContainer.innerHTML = '';
         saveBtn.dataset.editSku = '';
@@ -254,7 +268,7 @@
 
     // New product button
     if (newBtn) newBtn.addEventListener('click', () => {
-      ['product_sku', 'name', 'category', 'base_price', 'description'].forEach(id => $(`#${id}`).value = '');
+      ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3'].forEach(id => $(`#${id}`).value = '');
       imagesContainer.innerHTML = '';
       variantsContainer.innerHTML = '';
       addProductImageRow();
