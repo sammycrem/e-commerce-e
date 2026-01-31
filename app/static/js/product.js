@@ -23,6 +23,65 @@
   const addToCartBtn = $('#add-to-cart');
   const variantMessage = $('#variant-message');
 
+  // New helper for product cards
+  function createProductCard(p) {
+    const col = document.createElement('div');
+    col.className = 'col';
+    const firstImg = (p.images && p.images[0]) ? p.images[0].url : 'https://via.placeholder.com/300';
+    col.innerHTML = `
+      <a href="/product/${encodeURIComponent(p.product_sku)}" class="product-card-sm">
+        <div class="img-wrap">
+          <img src="${firstImg}" alt="${p.name}" loading="lazy">
+        </div>
+        <div class="card-title">${p.name}</div>
+        <div class="card-price">${formatPrice(p.base_price_cents || 0)}</div>
+      </a>
+    `;
+    return col;
+  }
+
+  async function fetchAndRenderProductList(skus, listId, sectionId) {
+    if (!skus || !skus.length) {
+      $(sectionId).classList.add('d-none');
+      return;
+    }
+    const listContainer = $(listId);
+    listContainer.innerHTML = '';
+    let hasItems = false;
+    for (const sku of skus) {
+      if (!sku) continue;
+      try {
+        const res = await fetch(`/api/products/${encodeURIComponent(sku)}`);
+        if (res.ok) {
+          const p = await res.json();
+          listContainer.appendChild(createProductCard(p));
+          hasItems = true;
+        }
+      } catch (e) {
+        console.error(`Error fetching SKU ${sku}:`, e);
+      }
+    }
+    if (hasItems) {
+      $(sectionId).classList.remove('d-none');
+    } else {
+      $(sectionId).classList.add('d-none');
+    }
+  }
+
+  function renderTags(p) {
+    const container = $('#product-tags');
+    if (!container) return;
+    container.innerHTML = '';
+    const tags = [p.tag1, p.tag2, p.tag3].filter(t => t && t.trim());
+    const colors = ['bg-primary', 'bg-info', 'bg-dark'];
+    tags.forEach((tag, i) => {
+        const badge = document.createElement('span');
+        badge.className = `badge tag-badge ${colors[i % colors.length]}`;
+        badge.textContent = tag;
+        container.appendChild(badge);
+    });
+  }
+
   // state
   let product = null;
   let selectedVariant = null;
@@ -216,8 +275,33 @@
       product = await res.json();
 
       productName.textContent = product.name;
-      productDescription.textContent = product.description || '';
+      productDescription.textContent = product.short_description || product.description || '';
       productPrice.textContent = formatPrice(product.base_price_cents || 0);
+
+      // Render tags
+      renderTags(product);
+
+      // Product Details
+      if (product.product_details && product.product_details.trim()) {
+        const detailContainer = $('#product-details-container');
+        if (detailContainer) {
+            detailContainer.textContent = product.product_details;
+            $('#product-details-section').classList.remove('d-none');
+        }
+      }
+
+      // Full Description
+      if (product.description && product.description.trim()) {
+        const fullDescContainer = $('#product-full-description');
+        if (fullDescContainer) {
+            fullDescContainer.textContent = product.description;
+            $('#product-full-description-section').classList.remove('d-none');
+        }
+      }
+
+      // Related & Proposed Products
+      fetchAndRenderProductList(product.related_products, '#related-products-list', '#related-products-section');
+      fetchAndRenderProductList(product.proposed_products, '#proposed-products-list', '#proposed-products-section');
 
       // ensure images arrays exist
       product.images = product.images || [];

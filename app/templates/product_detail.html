@@ -1,6 +1,63 @@
 {% extends "layout.html" %}
 {% block title %}Product - {{ sku }}{% endblock %}
 
+{% block head %}
+<style>
+    .product-card-sm {
+        transition: transform 0.2s;
+        border: none;
+        background: none;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    .product-card-sm:hover {
+        transform: translateY(-5px);
+        color: inherit;
+    }
+    .product-card-sm .img-wrap {
+        aspect-ratio: 1/1;
+        overflow: hidden;
+        border-radius: 12px;
+        background-color: #f8f9fa;
+        margin-bottom: 0.75rem;
+        border: 1px solid #eee;
+    }
+    .product-card-sm img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    .product-card-sm:hover img {
+        transform: scale(1.05);
+    }
+    .product-card-sm .card-title {
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-weight: 600;
+    }
+    .product-card-sm .card-price {
+        font-weight: 700;
+        color: var(--bs-primary);
+        font-size: 1rem;
+    }
+    .tag-badge {
+        font-size: 0.7rem;
+        padding: 0.25em 0.6em;
+        margin-right: 0.3em;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <div class="row g-5">
@@ -32,10 +89,13 @@
                 </ol>
             </nav>
 
-            <h1 id="product-name" class="display-5 fw-bold mb-2">Loading...</h1>
-            <p id="product-price" class="h3 text-primary fw-bold mb-4">$0.00</p>
+            <div id="product-tags" class="mb-2">
+                <!-- Tags will be injected here -->
+            </div>
+            <h3 id="product-name" class="fw-bold mb-2">Loading...</h3>
+            <p id="product-price" class="h4 text-primary fw-bold mb-4">$0.00</p>
 
-            <div id="product-description" class="text-muted mb-5 lead"></div>
+            <div id="product-description" class="text-muted mb-4 lead"></div>
 
             <hr class="my-4">
 
@@ -88,6 +148,42 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Product Details Section -->
+    <div id="product-details-section" class="row mt-5 pt-4 d-none">
+        <div class="col-12">
+            <h4 class="fw-bold mb-4 border-bottom pb-2">Product Details</h4>
+            <div id="product-details-container" class="text-muted" style="white-space: pre-line; line-height: 1.6;">
+                <!-- Product details injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Description Section -->
+    <div id="product-full-description-section" class="row mt-5 pt-4 d-none">
+        <div class="col-12">
+            <h4 class="fw-bold mb-4 border-bottom pb-2">Description</h4>
+            <div id="product-full-description" class="text-muted" style="line-height: 1.6;">
+                <!-- Full description injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    <div id="related-products-section" class="mt-5 pt-5 border-top d-none">
+        <h4 class="fw-bold mb-4">Deals on related products</h4>
+        <div id="related-products-list" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4">
+            <!-- Related products injected here -->
+        </div>
+    </div>
+
+    <!-- Proposed Products -->
+    <div id="proposed-products-section" class="mt-5 pt-5 d-none">
+        <h4 class="fw-bold mb-4">Similar Designs</h4>
+        <div id="proposed-products-list" class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4">
+            <!-- Proposed products injected here -->
         </div>
     </div>
 </div>

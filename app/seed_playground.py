@@ -20,9 +20,9 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 
-from app import app
-from extensions import db
-from models import Product, Variant, ProductImage, VariantImage
+from app.app import app
+from app.extensions import db
+from app.models import Product, Variant, ProductImage, VariantImage
 
 
 
@@ -113,6 +113,13 @@ def create_product_data(product_key):
         {"url": f"{BASE_URL}/{product_key}/c-3.webp", "alt_text": f"{product_key} black 3", "display_order": 8},
     ]
 
+    # Related/Proposed logic
+    related = []
+    proposed = []
+    if sku == "p-1":
+        related = ["p-2", "p-3"]
+        proposed = ["p-4"]
+
     return {
         "product_sku": sku,
         "name": name,
@@ -120,8 +127,8 @@ def create_product_data(product_key):
         "description": description,
         "short_description": f"Short desc for {sku}",
         "product_details": f"Detailed info for {sku}",
-        "related_products": [],
-        "proposed_products": [],
+        "related_products": related,
+        "proposed_products": proposed,
         "tag1": "tag1",
         "tag2": "tag2",
         "tag3": "tag3",
@@ -212,25 +219,6 @@ def main():
 
             db.session.commit()
             print("Seeding complete. Created products:", ", ".join(created))
-            print("Seeding playground data...")
-            created = []
-            try:
-                for i in range(1, PRODUCT_COUNT + 1):
-                    key = f"p-{i}"
-                    pdata = create_product_data(key)
-                    if RECREATE_IF_EXISTS:
-                        safe_delete_product_by_sku(db.session, pdata["product_sku"])
-
-                    prod = insert_product(db.session, pdata)
-                    created.append(prod.product_sku)
-
-                db.session.commit()
-                print("Seeding complete. Created products:", ", ".join(created))
-            except Exception as exc:
-                db.session.rollback()
-                print("Error during seeding:", exc)
-                raise
-                
         except Exception as exc:
             db.session.rollback()
             print("Error during seeding:", exc)

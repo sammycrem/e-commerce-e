@@ -857,12 +857,6 @@ def admin_update_product(sku):
         logger.exception("Admin update failed")
         return jsonify({"error": "Failed to update product", "details": str(e)}), 500
 
-
-    except Exception as e:
-        db.session.rollback()
-        logger.exception("Admin update failed")
-        return jsonify({"error": "Failed to update product", "details": str(e)}), 500
-
 # Delete a product (admin)
 @app.route('/api/admin/products/<string:sku>', methods=['DELETE'])
 def admin_delete_product(sku):
