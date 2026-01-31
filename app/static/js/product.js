@@ -41,7 +41,9 @@
   }
 
   async function fetchAndRenderProductList(skus, listId, sectionId) {
+    console.log(`Fetching product list for ${sectionId}`, skus);
     if (!skus || !skus.length) {
+      console.log(`No SKUs for ${sectionId}`);
       $(sectionId).classList.add('d-none');
       return;
     }
@@ -50,12 +52,16 @@
     let hasItems = false;
     for (const sku of skus) {
       if (!sku) continue;
+      console.log(`Fetching related product: ${sku}`);
       try {
         const res = await fetch(`/api/products/${encodeURIComponent(sku)}`);
         if (res.ok) {
           const p = await res.json();
+          console.log(`Successfully fetched ${sku}`);
           listContainer.appendChild(createProductCard(p));
           hasItems = true;
+        } else {
+          console.warn(`Failed to fetch ${sku}: ${res.status}`);
         }
       } catch (e) {
         console.error(`Error fetching SKU ${sku}:`, e);

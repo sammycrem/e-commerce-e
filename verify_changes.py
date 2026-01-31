@@ -7,6 +7,9 @@ async def main():
         browser = await p.chromium.launch()
         page = await browser.new_page()
 
+        # Capture console logs
+        page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.type}: {msg.text}"))
+
         try:
             # Login
             print("Logging in...")
@@ -31,13 +34,16 @@ async def main():
                 visible = await page.is_visible(f"#{field}")
                 print(f"Admin field {field} visible: {visible}")
 
-            await page.screenshot(path="/home/jules/verification/admin_dashboard.png")
-            print("Admin dashboard screenshot saved.")
+            await page.screenshot(path="/home/jules/verification/admin_dashboard_full.png", full_page=True)
+            print("Admin dashboard full-page screenshot saved.")
 
-            # Verify Product Detail Page (assuming p-1 exists)
+            # Verify Product Detail Page (p-1)
             print("Verifying Product Detail Page (p-1)...")
             await page.goto("http://localhost:5000/product/p-1")
-            await page.wait_for_selector("#product-name")
+            await page.wait_for_load_state("networkidle")
+
+            # Wait for related products to load
+            await page.wait_for_timeout(2000) # Give it some time to fetch and render
 
             # Check for UI elements
             ui_elements = [
@@ -54,12 +60,12 @@ async def main():
                     content = await page.inner_text(el)
                     print(f"  Content length: {len(content)}")
 
-            await page.screenshot(path="/home/jules/verification/product_detail_p1.png")
-            print("Product detail screenshot saved.")
+            await page.screenshot(path="/home/jules/verification/product_detail_p1_full.png", full_page=True)
+            print("Product detail full-page screenshot saved.")
 
         except Exception as e:
             print(f"An error occurred: {e}")
-            await page.screenshot(path="/home/jules/verification/error.png")
+            await page.screenshot(path="/home/jules/verification/error_full.png", full_page=True)
         finally:
             await browser.close()
 

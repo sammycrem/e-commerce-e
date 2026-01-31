@@ -219,6 +219,13 @@ def create_product_data(product_key):
         {"url": f"{BASE_IMAGE_URL}/{product_key}/c-3.webp", "alt_text": f"{product_key} black 3", "display_order": 8},
     ]
 
+    # Related/Proposed logic
+    related = []
+    proposed = []
+    if sku == "p-1":
+        related = ["p-2", "p-3"]
+        proposed = ["p-4"]
+
     return {
         "product_sku": sku,
         "name": name,
@@ -226,8 +233,8 @@ def create_product_data(product_key):
         "description": description,
         "short_description": f"Short desc for {sku}",
         "product_details": f"Detailed info for {sku}",
-        "related_products": [],
-        "proposed_products": [],
+        "related_products": related,
+        "proposed_products": proposed,
         "tag1": "tag1",
         "tag2": "tag2",
         "tag3": "tag3",
