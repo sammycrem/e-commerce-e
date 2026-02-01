@@ -367,6 +367,29 @@
         }
       });
 
+      // Zoom feature
+      const mainImageWrap = $('.main-image-wrap');
+      if (mainImageWrap && mainImage) {
+        mainImageWrap.addEventListener('mousemove', (e) => {
+          const rect = mainImageWrap.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+          mainImage.style.transformOrigin = `${x}% ${y}%`;
+          mainImage.style.transform = 'scale(2.5)';
+        });
+
+        mainImageWrap.addEventListener('mouseenter', () => {
+          mainImageWrap.classList.add('zoomed');
+        });
+
+        mainImageWrap.addEventListener('mouseleave', () => {
+          mainImageWrap.classList.remove('zoomed');
+          mainImage.style.transform = 'scale(1)';
+          mainImage.style.transformOrigin = 'center center';
+        });
+      }
+
     } catch (err) {
       console.error(err);
       productName.textContent = 'Product not found';
