@@ -375,8 +375,11 @@
           const x = ((e.clientX - rect.left) / rect.width) * 100;
           const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-          mainImage.style.transformOrigin = `${x}% ${y}%`;
-          mainImage.style.transform = 'scale(2.5)';
+          mainImage.style.transformOrigin = `${x}% ${y*1.5}%`;
+          mainImage.style.transform = 'scale(2)';
+          mainImage.style.maxHeight = "100%";
+
+          
         });
 
         mainImageWrap.addEventListener('mouseenter', () => {
@@ -387,6 +390,7 @@
           mainImageWrap.classList.remove('zoomed');
           mainImage.style.transform = 'scale(1)';
           mainImage.style.transformOrigin = 'center center';
+          mainImage.style.maxHeight = "revert-layer";
         });
       }
 
