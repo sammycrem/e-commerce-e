@@ -696,6 +696,32 @@ def get_authorized_keys():
         return jsonify({'error': "_not_authorized", 'url': request.remote_addr}), 400
 
 
+@app.route('/api/admin/upload-image', methods=['POST'])
+@login_required
+def admin_upload_image():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Add uuid to avoid name collisions
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        filepath = os.path.join(app.root_path, 'static', 'uploads', 'products', unique_filename)
+        file.save(filepath)
+
+        url = f"/static/uploads/products/{unique_filename}"
+        return jsonify({"url": url}), 201
+
+    return jsonify({"error": "File type not allowed"}), 400
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

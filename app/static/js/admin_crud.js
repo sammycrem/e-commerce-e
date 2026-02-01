@@ -51,15 +51,46 @@
       return isNaN(val) ? 0 : Math.round(val * 100);
     }
 
+    async function triggerUpload(targetInput) {
+      const fileInput = el('input', { type: 'file', accept: 'image/*' });
+      fileInput.onchange = async () => {
+        if (!fileInput.files.length) return;
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+          showFeedback('Uploading...');
+          const res = await fetch('/api/admin/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (res.ok) {
+            targetInput.value = data.url;
+            showFeedback('Upload successful', 'success');
+          } else {
+            showFeedback(data.error || 'Upload failed', 'error');
+          }
+        } catch (err) {
+          showFeedback('Upload error', 'error');
+          console.error(err);
+        }
+      };
+      fileInput.click();
+    }
+
     // Add product image row
     function addProductImageRow(url = '', alt = '', order = 0) {
-      const row = el('div', { class: 'image-row', 'data-role': 'product-image', style: 'display:flex; gap:8px; margin-bottom:6px;' },
-        el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url }),
+      const urlInput = el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url });
+      const row = el('div', { class: 'image-row', 'data-role': 'product-image' },
+        urlInput,
         el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
         el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
+        el('button', { class: 'btn btn-secondary btn-upload', type: 'button' }, 'Upload'),
         el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
       );
-      row.querySelector('button').addEventListener('click', () => row.remove());
+      row.querySelector('.btn-upload').addEventListener('click', () => triggerUpload(urlInput));
+      row.querySelector('.btn-danger').addEventListener('click', () => row.remove());
       imagesContainer.appendChild(row);
     }
 
@@ -104,13 +135,16 @@
 
       // function to add one variant-image row (used for both prefill and "Add image" button)
       function addVariantImageRow(url = '', alt = '', order = 0) {
-        const r = el('div', { class: 'variant-image-row', 'data-role': 'variant-image', style: 'display:flex; gap:8px; margin-bottom:4px;' },
-          el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url }),
+        const vUrlInput = el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url });
+        const r = el('div', { class: 'variant-image-row', 'data-role': 'variant-image' },
+          vUrlInput,
           el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
           el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
+          el('button', { class: 'btn btn-secondary btn-upload', type: 'button' }, 'Upload'),
           el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
         );
-        r.querySelector('button').addEventListener('click', () => r.remove());
+        r.querySelector('.btn-upload').addEventListener('click', () => triggerUpload(vUrlInput));
+        r.querySelector('.btn-danger').addEventListener('click', () => r.remove());
         vImgs.appendChild(r);
       }
 
