@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import string
 import random
 import os
-from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, generate_image_icon, ensure_icon_for_url, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
+from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, convert_to_webp, generate_image_icon, ensure_icon_for_url, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
 import logging
 import json
 from werkzeug.utils import secure_filename
