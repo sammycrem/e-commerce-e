@@ -13,10 +13,10 @@
 
   function getIconUrl(url) {
     if (!url || !url.includes('/static/')) return url;
-    const dotIndex = url.lastIndexOf('.');
-    if (dotIndex === -1) return url + '_icon';
-    if (url.substring(dotIndex - 5, dotIndex) === '_icon') return url;
-    return url.substring(0, dotIndex) + '_icon' + url.substring(dotIndex);
+    const dotIdx = url.lastIndexOf('.');
+    const base = dotIdx !== -1 ? url.substring(0, dotIdx) : url;
+    if (base.endsWith('_icon')) return url;
+    return base + '_icon.webp';
   }
 
   // DOM

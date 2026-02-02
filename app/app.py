@@ -130,13 +130,10 @@ def icon_url_filter(url):
     if '/static/' not in url:
         return url
 
-    dot_idx = url.rfind('.')
-    if dot_idx != -1:
-        # Check if it already has _icon to avoid double suffix
-        if url[dot_idx-5:dot_idx] == "_icon":
-            return url
-        return url[:dot_idx] + "_icon" + url[dot_idx:]
-    return url + "_icon"
+    base, _ = os.path.splitext(url)
+    if base.endswith("_icon"):
+        return url
+    return base + "_icon.webp"
 
 from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone
 
@@ -732,19 +729,21 @@ def admin_upload_image():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         # Add uuid to avoid name collisions
-        unique_filename = f"{uuid.uuid4()}_{filename}"
+        unique_base = f"{uuid.uuid4()}_{os.path.splitext(filename)[0]}"
+        unique_filename = unique_base + ".webp"
         filepath = os.path.join(app.root_path, 'static', 'uploads', 'products', unique_filename)
-        file.save(filepath)
+
+        # Save temp file then convert to webp
+        temp_path = os.path.join(app.root_path, 'static', 'uploads', 'products', "temp_" + filename)
+        file.save(temp_path)
+        convert_to_webp(temp_path, filepath)
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
         # Generate small version (icon)
-        dot_idx = unique_filename.rfind('.')
-        if dot_idx != -1:
-            icon_filename = unique_filename[:dot_idx] + "_icon" + unique_filename[dot_idx:]
-        else:
-            icon_filename = unique_filename + "_icon"
-
+        icon_filename = unique_base + "_icon.webp"
         icon_path = os.path.join(app.root_path, 'static', 'uploads', 'products', icon_filename)
-        generate_image_icon(filepath, icon_path, height=100)
+        generate_image_icon(filepath, icon_path, height=300)
 
         url = f"/static/uploads/products/{unique_filename}"
         return jsonify({"url": url}), 201

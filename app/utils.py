@@ -513,10 +513,23 @@ def resize_image(input_path, output_path, max_size_mb=2):
         return False
 # ---------end------------
 
-def generate_image_icon(input_path, output_path, height=100):
+def convert_to_webp(input_path, output_path, quality=85):
+    """
+    Converts an image to WebP format.
+    """
+    try:
+        img = Image.open(input_path)
+        img.save(output_path, "WEBP", quality=quality)
+        return True
+    except Exception as e:
+        logger.error(f"Error converting image to webp: {e}")
+        return False
+
+def generate_image_icon(input_path, output_path, height=300):
     """
     Generates a small version of the image with a fixed height.
     Maintains aspect ratio for the width.
+    Saves as WebP.
     """
     try:
         img = Image.open(input_path)
@@ -527,8 +540,8 @@ def generate_image_icon(input_path, output_path, height=100):
 
         img = img.resize((new_width, height), Image.LANCZOS)
 
-        # Save as the same format as input
-        img.save(output_path, optimize=True, quality=85)
+        # Save as WebP
+        img.save(output_path, "WEBP", quality=85)
         return True
     except Exception as e:
         logger.error(f"Error generating image icon: {e}")
@@ -552,14 +565,11 @@ def ensure_icon_for_url(url, app_root_path):
     if not os.path.exists(input_path):
         return
 
-    dot_idx = input_path.rfind('.')
-    if dot_idx == -1:
-        output_path = input_path + "_icon"
-    else:
-        output_path = input_path[:dot_idx] + "_icon" + input_path[dot_idx:]
+    base, _ = os.path.splitext(input_path)
+    output_path = base + "_icon.webp"
 
     if not os.path.exists(output_path):
-        generate_image_icon(input_path, output_path, height=100)
+        generate_image_icon(input_path, output_path, height=300)
 # ---------end------------
 
 def rename_image(old_name, new_name, upload_folder):
