@@ -1,8 +1,9 @@
 // index.js - loads product list and injects into #product-grid
 function getIconUrl(url) {
-  if (!url || !url.startsWith('/static/')) return url;
+  if (!url || !url.includes('/static/')) return url;
   const dotIndex = url.lastIndexOf('.');
   if (dotIndex === -1) return url + '_icon';
+  if (url.substring(dotIndex - 5, dotIndex) === '_icon') return url;
   return url.substring(0, dotIndex) + '_icon' + url.substring(dotIndex);
 }
 

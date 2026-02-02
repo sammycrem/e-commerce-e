@@ -23,6 +23,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 from app.app import app
 from app.extensions import db
 from app.models import Product, Variant, ProductImage, VariantImage
+from app.utils import ensure_icon_for_url
 
 
 
@@ -171,9 +172,11 @@ def insert_product(session, pdata):
 
     # product images
     for idx, img in enumerate(pdata.get("images", [])):
+        url = img["url"]
+        ensure_icon_for_url(url, app.root_path)
         pi = ProductImage(
             product_id=product.id,
-            url=img["url"],
+            url=url,
             alt_text=img.get("alt_text", ""),
             display_order=int(img.get("display_order", idx))
         )
@@ -192,9 +195,11 @@ def insert_product(session, pdata):
         session.add(variant)
         session.flush()
         for idx, vi in enumerate(v.get("images", []) or []):
+            vurl = vi.get("url")
+            ensure_icon_for_url(vurl, app.root_path)
             vimg = VariantImage(
                 variant_id=variant.id,
-                url=vi.get("url"),
+                url=vurl,
                 alt_text=vi.get("alt_text", ""),
                 display_order=idx
             )

@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import string
 import random
 import os
-from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, generate_image_icon, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
+from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, generate_image_icon, ensure_icon_for_url, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
 import logging
 import json
 from werkzeug.utils import secure_filename
@@ -126,12 +126,15 @@ def inject_now():
 def icon_url_filter(url):
     if not url:
         return url
-    # Handle external URLs or placeholders
-    if not url.startswith('/static/'):
+    # Handle external URLs or placeholders — only process local static assets
+    if '/static/' not in url:
         return url
 
     dot_idx = url.rfind('.')
     if dot_idx != -1:
+        # Check if it already has _icon to avoid double suffix
+        if url[dot_idx-5:dot_idx] == "_icon":
+            return url
         return url[:dot_idx] + "_icon" + url[dot_idx:]
     return url + "_icon"
 
@@ -283,9 +286,11 @@ def insert_product(session, pdata):
     session.flush()
 
     for idx, img in enumerate(pdata.get("images", [])):
+        url = img["url"]
+        ensure_icon_for_url(url, app.root_path)
         pi = ProductImage(
             product_id=product.id,
-            url=img["url"],
+            url=url,
             alt_text=img.get("alt_text", ""),
             display_order=int(img.get("display_order", idx))
         )
@@ -303,9 +308,11 @@ def insert_product(session, pdata):
         session.add(variant)
         session.flush()
         for idx, vi in enumerate(v.get("images", []) or []):
+            vurl = vi.get("url")
+            ensure_icon_for_url(vurl, app.root_path)
             vimg = VariantImage(
                 variant_id=variant.id,
-                url=vi.get("url"),
+                url=vurl,
                 alt_text=vi.get("alt_text", ""),
                 display_order=idx
             )

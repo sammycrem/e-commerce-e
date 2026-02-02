@@ -79,17 +79,39 @@
       fileInput.click();
     }
 
+    function getIconUrl(url) {
+      if (!url || !url.includes('/static/')) return url;
+      const dotIndex = url.lastIndexOf('.');
+      if (dotIndex === -1) return url + '_icon';
+      if (url.substring(dotIndex - 5, dotIndex) === '_icon') return url;
+      return url.substring(0, dotIndex) + '_icon' + url.substring(dotIndex);
+    }
+
     // Add product image row
     function addProductImageRow(url = '', alt = '', order = 0) {
       const urlInput = el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url });
+      const previewImg = el('img', {
+        src: getIconUrl(url) || 'https://via.placeholder.com/50',
+        style: 'width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #eee;'
+      });
+
+      urlInput.addEventListener('input', () => {
+        previewImg.src = getIconUrl(urlInput.value) || 'https://via.placeholder.com/50';
+      });
+
       const row = el('div', { class: 'image-row', 'data-role': 'product-image' },
+        previewImg,
         urlInput,
         el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
         el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
         el('button', { class: 'btn btn-secondary btn-upload', type: 'button' }, 'Upload'),
         el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
       );
-      row.querySelector('.btn-upload').addEventListener('click', () => triggerUpload(urlInput));
+      row.querySelector('.btn-upload').addEventListener('click', () => {
+        triggerUpload(urlInput).then(() => {
+          previewImg.src = getIconUrl(urlInput.value);
+        });
+      });
       row.querySelector('.btn-danger').addEventListener('click', () => row.remove());
       imagesContainer.appendChild(row);
     }
@@ -136,14 +158,28 @@
       // function to add one variant-image row (used for both prefill and "Add image" button)
       function addVariantImageRow(url = '', alt = '', order = 0) {
         const vUrlInput = el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url });
+        const vPreviewImg = el('img', {
+          src: getIconUrl(url) || 'https://via.placeholder.com/40',
+          style: 'width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #eee;'
+        });
+
+        vUrlInput.addEventListener('input', () => {
+          vPreviewImg.src = getIconUrl(vUrlInput.value) || 'https://via.placeholder.com/40';
+        });
+
         const r = el('div', { class: 'variant-image-row', 'data-role': 'variant-image' },
+          vPreviewImg,
           vUrlInput,
           el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
           el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
           el('button', { class: 'btn btn-secondary btn-upload', type: 'button' }, 'Upload'),
           el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
         );
-        r.querySelector('.btn-upload').addEventListener('click', () => triggerUpload(vUrlInput));
+        r.querySelector('.btn-upload').addEventListener('click', () => {
+          triggerUpload(vUrlInput).then(() => {
+            vPreviewImg.src = getIconUrl(vUrlInput.value);
+          });
+        });
         r.querySelector('.btn-danger').addEventListener('click', () => r.remove());
         vImgs.appendChild(r);
       }

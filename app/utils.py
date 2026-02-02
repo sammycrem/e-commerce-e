@@ -535,6 +535,33 @@ def generate_image_icon(input_path, output_path, height=100):
         return False
 # ---------end------------
 
+def ensure_icon_for_url(url, app_root_path):
+    """
+    Ensures that an _icon version of the image exists for the given static URL.
+    """
+    if not url or '/static/' not in url:
+        return
+
+    # Extract relative path after /static/
+    parts = url.split('/static/')
+    relative_path = parts[-1]
+
+    # Construct full file path
+    input_path = os.path.join(app_root_path, 'static', relative_path)
+
+    if not os.path.exists(input_path):
+        return
+
+    dot_idx = input_path.rfind('.')
+    if dot_idx == -1:
+        output_path = input_path + "_icon"
+    else:
+        output_path = input_path[:dot_idx] + "_icon" + input_path[dot_idx:]
+
+    if not os.path.exists(output_path):
+        generate_image_icon(input_path, output_path, height=100)
+# ---------end------------
+
 def rename_image(old_name, new_name, upload_folder):
     """Renames an image file in the given directory.
 
