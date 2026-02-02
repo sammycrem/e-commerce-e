@@ -116,9 +116,9 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             {% if item.variant.images %}
-                                                <img src="{{ item.variant.images[0].url }}" alt="{{ item.variant.product.name }}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                                <img src="{{ item.variant.images[0].url | icon_url }}" alt="{{ item.variant.product.name }}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
                                             {% elif item.variant.product.images %}
-                                                <img src="{{ item.variant.product.images[0].url }}" alt="{{ item.variant.product.name }}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                                <img src="{{ item.variant.product.images[0].url | icon_url }}" alt="{{ item.variant.product.name }}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
                                             {% endif %}
                                             <div>
                                                 <div class="fw-bold">{{ item.variant.product.name }}</div>

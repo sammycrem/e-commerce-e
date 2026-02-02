@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import string
 import random
 import os
-from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
+from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, generate_image_icon, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
 import logging
 import json
 from werkzeug.utils import secure_filename
@@ -121,6 +121,19 @@ login_manager.session_protection = "strong"
 @app.context_processor
 def inject_now():
     return {'now': datetime.now(timezone.utc)}
+
+@app.template_filter('icon_url')
+def icon_url_filter(url):
+    if not url:
+        return url
+    # Handle external URLs or placeholders
+    if not url.startswith('/static/'):
+        return url
+
+    dot_idx = url.rfind('.')
+    if dot_idx != -1:
+        return url[:dot_idx] + "_icon" + url[dot_idx:]
+    return url + "_icon"
 
 from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone
 
@@ -715,6 +728,16 @@ def admin_upload_image():
         unique_filename = f"{uuid.uuid4()}_{filename}"
         filepath = os.path.join(app.root_path, 'static', 'uploads', 'products', unique_filename)
         file.save(filepath)
+
+        # Generate small version (icon)
+        dot_idx = unique_filename.rfind('.')
+        if dot_idx != -1:
+            icon_filename = unique_filename[:dot_idx] + "_icon" + unique_filename[dot_idx:]
+        else:
+            icon_filename = unique_filename + "_icon"
+
+        icon_path = os.path.join(app.root_path, 'static', 'uploads', 'products', icon_filename)
+        generate_image_icon(filepath, icon_path, height=100)
 
         url = f"/static/uploads/products/{unique_filename}"
         return jsonify({"url": url}), 201

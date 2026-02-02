@@ -11,6 +11,13 @@
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const formatPrice = cents => `$${(cents/100).toFixed(2)}`;
 
+  function getIconUrl(url) {
+    if (!url || !url.startsWith('/static/')) return url;
+    const dotIndex = url.lastIndexOf('.');
+    if (dotIndex === -1) return url + '_icon';
+    return url.substring(0, dotIndex) + '_icon' + url.substring(dotIndex);
+  }
+
   // DOM
   const thumbRail = $('#thumb-rail');
   const mainImage = $('#main-image');
@@ -29,7 +36,7 @@
   function createProductCard(p) {
     const col = document.createElement('div');
     col.className = 'col';
-    const firstImg = (p.images && p.images[0]) ? p.images[0].url : 'https://via.placeholder.com/300';
+    const firstImg = (p.images && p.images[0]) ? getIconUrl(p.images[0].url) : 'https://via.placeholder.com/300';
     col.innerHTML = `
       <a href="/product/${encodeURIComponent(p.product_sku)}" class="product-card-sm">
         <div class="img-wrap">
@@ -103,7 +110,7 @@
     wrapper.className = 'thumb-item';
     wrapper.tabIndex = 0;
     const img = document.createElement('img');
-    img.src = imgObj.url;
+    img.src = getIconUrl(imgObj.url);
     img.alt = imgObj.alt_text || product.name || 'product';
     img.loading = 'lazy';
     wrapper.appendChild(img);
@@ -165,7 +172,7 @@
     for (const [color, arr] of colorMap.entries()) {
       // pick variant that has images or first in array
       const firstVariant = arr.find(x => x.images && x.images.length) || arr[0];
-      const swatchImg = firstVariant && firstVariant.images && firstVariant.images[0] ? firstVariant.images[0].url : (product.images && product.images[0] && product.images[0].url) || '';
+      const swatchImg = firstVariant && firstVariant.images && firstVariant.images[0] ? getIconUrl(firstVariant.images[0].url) : getIconUrl((product.images && product.images[0] && product.images[0].url) || '');
       const swatch = document.createElement('button');
       swatch.className = 'swatch';
       swatch.type = 'button';
@@ -375,11 +382,8 @@
           const x = ((e.clientX - rect.left) / rect.width) * 100;
           const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-          mainImage.style.transformOrigin = `${x}% ${y*1.5}%`;
-          mainImage.style.transform = 'scale(2)';
-          mainImage.style.maxHeight = "100%";
-
-          
+          mainImage.style.transformOrigin = `${x}% ${y}%`;
+          mainImage.style.transform = 'scale(2.5)';
         });
 
         mainImageWrap.addEventListener('mouseenter', () => {
@@ -390,7 +394,6 @@
           mainImageWrap.classList.remove('zoomed');
           mainImage.style.transform = 'scale(1)';
           mainImage.style.transformOrigin = 'center center';
-          mainImage.style.maxHeight = "revert-layer";
         });
       }
 

@@ -1,4 +1,11 @@
 // index.js - loads product list and injects into #product-grid
+function getIconUrl(url) {
+  if (!url || !url.startsWith('/static/')) return url;
+  const dotIndex = url.lastIndexOf('.');
+  if (dotIndex === -1) return url + '_icon';
+  return url.substring(0, dotIndex) + '_icon' + url.substring(dotIndex);
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   const grid = document.getElementById('product-grid');
   try {
@@ -10,7 +17,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     products.forEach(p => {
       const card = document.createElement('div');
       card.className = 'product-card animate__animated animate__fadeInUp';
-      const imageUrl = (p.images && p.images.length) ? p.images[0].url : 'https://via.placeholder.com/600x800?text=No+Image';
+      const imageUrl = (p.images && p.images.length) ? getIconUrl(p.images[0].url) : 'https://via.placeholder.com/600x800?text=No+Image';
 
       card.innerHTML = `
         <div class="product-image-container">

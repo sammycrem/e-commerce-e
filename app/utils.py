@@ -513,6 +513,28 @@ def resize_image(input_path, output_path, max_size_mb=2):
         return False
 # ---------end------------
 
+def generate_image_icon(input_path, output_path, height=100):
+    """
+    Generates a small version of the image with a fixed height.
+    Maintains aspect ratio for the width.
+    """
+    try:
+        img = Image.open(input_path)
+
+        # Calculate width to maintain aspect ratio
+        aspect_ratio = img.width / img.height
+        new_width = int(height * aspect_ratio)
+
+        img = img.resize((new_width, height), Image.LANCZOS)
+
+        # Save as the same format as input
+        img.save(output_path, optimize=True, quality=85)
+        return True
+    except Exception as e:
+        logger.error(f"Error generating image icon: {e}")
+        return False
+# ---------end------------
+
 def rename_image(old_name, new_name, upload_folder):
     """Renames an image file in the given directory.
 

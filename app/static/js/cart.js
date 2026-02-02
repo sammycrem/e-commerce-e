@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     return `€${(cents / 100).toFixed(2)}`;
   }
 
+  function getIconUrl(url) {
+    if (!url || !url.startsWith('/static/')) return url;
+    const dotIndex = url.lastIndexOf('.');
+    if (dotIndex === -1) return url + '_icon';
+    return url.substring(0, dotIndex) + '_icon' + url.substring(dotIndex);
+  }
+
   // Fetch session cart from backend and render
   async function refreshCart() {
     try {
@@ -57,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const productInfo = document.createElement('div');
       productInfo.className = 'product-info';
       const img = document.createElement('img');
-      img.src = item.image_url || 'https://via.placeholder.com/100';
+      img.src = getIconUrl(item.image_url) || 'https://via.placeholder.com/100';
       img.alt = item.product_name || '';
       const details = document.createElement('div');
       const title = document.createElement('p');

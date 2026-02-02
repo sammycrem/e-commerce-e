@@ -290,10 +290,9 @@ a:hover {
 .main-image-wrap {
     flex: 1;
     background: #fff;
-    /*padding: 1rem;*/
-    /*border-radius: 1rem;*/
+    padding: 1rem;
+    border-radius: 1rem;
     box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    border-radius: 0 !important;
 }
 
 .main-image-wrap img {
