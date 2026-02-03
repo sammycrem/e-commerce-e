@@ -18,7 +18,6 @@ import uuid
 from openai import OpenAI
 import requests
 from flask_cors import CORS
-import uuid
 from math import ceil
 from decimal import Decimal, ROUND_HALF_UP
 

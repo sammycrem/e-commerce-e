@@ -102,19 +102,25 @@
 
     data.items.forEach(item => {
       const div = document.createElement('div');
-      div.className = 'sidebar-item d-flex align-items-center gap-3 p-2 border rounded shadow-sm';
-      const img = getIconUrl(item.image_url) || 'https://via.placeholder.com/60';
+      div.className = 'sidebar-item';
+      const img = getIconUrl(item.image_url) || 'https://via.placeholder.com/120';
 
       div.innerHTML = `
-        <img src="${img}" alt="${item.product_name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
-        <div class="flex-grow-1 overflow-hidden">
-          <div class="small fw-bold text-truncate" title="${item.product_name}">${item.product_name}</div>
-          <div class="small text-primary fw-bold">${formatPrice(item.unit_price_cents)}</div>
-          <div class="qty-mini d-flex align-items-center gap-2 mt-1">
-            <button type="button" class="btn btn-outline-secondary btn-sm px-1 py-0 minus" style="line-height: 1;">-</button>
-            <span class="small fw-bold qty-val">${item.quantity}</span>
-            <button type="button" class="btn btn-outline-secondary btn-sm px-1 py-0 plus" style="line-height: 1;">+</button>
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex justify-content-between align-items-center gap-2">
+            <a href="/product/${encodeURIComponent(item.product_sku)}" class="flex-shrink-0">
+               <img src="${img}" alt="${item.product_name}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;">
+            </a>
+            <div class="d-flex flex-column align-items-center gap-2">
+               <div class="qty-box">
+                 <button type="button" class="minus">-</button>
+                 <span class="qty-val">${item.quantity}</span>
+                 <button type="button" class="plus">+</button>
+               </div>
+               <div class="sidebar-price">${formatPrice(item.unit_price_cents)}</div>
+            </div>
           </div>
+          <div class="fw-bold text-center text-muted small">${item.product_name}</div>
         </div>
       `;
 

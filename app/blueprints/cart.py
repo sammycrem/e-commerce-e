@@ -54,6 +54,7 @@ def get_cart():
 
         items.append({
             "sku": variant.sku,
+            "product_sku": variant.product.product_sku,
             "quantity": quantity,
             "product_name": variant.product.name,
             "color": variant.color_name,
