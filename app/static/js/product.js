@@ -51,9 +51,7 @@
   }
 
   async function fetchAndRenderProductList(skus, listId, sectionId) {
-    console.log(`Fetching product list for ${sectionId}`, skus);
     if (!skus || !skus.length) {
-      console.log(`No SKUs for ${sectionId}`);
       $(sectionId).classList.add('d-none');
       return;
     }
@@ -61,7 +59,6 @@
     listContainer.innerHTML = '';
 
     try {
-      // Use batch endpoint for efficiency
       const queryParams = skus.filter(s => !!s).map(s => `sku=${encodeURIComponent(s)}`).join('&');
       const res = await fetch(`/api/products/batch?${queryParams}`);
       if (res.ok) {
@@ -77,8 +74,81 @@
     } catch (e) {
       console.error(`Error fetching batch SKUs:`, e);
     }
-
     $(sectionId).classList.add('d-none');
+  }
+
+  async function refreshCartSidebar() {
+    try {
+      const res = await fetch('/api/cart', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Failed to load cart');
+      const data = await res.json();
+      renderCartSidebar(data);
+    } catch (err) {
+      console.error('refreshCartSidebar error:', err);
+    }
+  }
+
+  function renderCartSidebar(data) {
+    const container = $('#sidebar-cart-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!data || !data.items || data.items.length === 0) {
+      container.innerHTML = '<p class="text-muted small">Your cart is empty.</p>';
+      const totalEl = $('#sidebar-total');
+      if (totalEl) totalEl.textContent = formatPrice(0);
+      return;
+    }
+
+    data.items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'sidebar-item d-flex align-items-center gap-3 p-2 border rounded shadow-sm';
+      const img = getIconUrl(item.image_url) || 'https://via.placeholder.com/60';
+
+      div.innerHTML = `
+        <img src="${img}" alt="${item.product_name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+        <div class="flex-grow-1 overflow-hidden">
+          <div class="small fw-bold text-truncate" title="${item.product_name}">${item.product_name}</div>
+          <div class="small text-primary fw-bold">${formatPrice(item.unit_price_cents)}</div>
+          <div class="qty-mini d-flex align-items-center gap-2 mt-1">
+            <button type="button" class="btn btn-outline-secondary btn-sm px-1 py-0 minus" style="line-height: 1;">-</button>
+            <span class="small fw-bold qty-val">${item.quantity}</span>
+            <button type="button" class="btn btn-outline-secondary btn-sm px-1 py-0 plus" style="line-height: 1;">+</button>
+          </div>
+        </div>
+      `;
+
+      const minusBtn = $('.minus', div);
+      const plusBtn = $('.plus', div);
+
+      minusBtn.addEventListener('click', () => updateCartItem(item.sku, item.quantity - 1));
+      plusBtn.addEventListener('click', () => updateCartItem(item.sku, item.quantity + 1));
+
+      container.appendChild(div);
+    });
+
+    const totalEl = $('#sidebar-total');
+    if (totalEl) totalEl.textContent = formatPrice(data.subtotal_cents || 0);
+  }
+
+  async function updateCartItem(sku, quantity) {
+    try {
+      const res = await fetch('/api/cart', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku, quantity: Math.max(0, quantity) })
+      });
+      if (res.ok) {
+        await refreshCartSidebar();
+      }
+    } catch (err) {
+      console.error('updateCartItem error:', err);
+    }
+  }
+
+  function goToCart() {
+    window.location.href = '/cart';
   }
 
   function renderTags(p) {
@@ -275,9 +345,9 @@
       if (!res.ok) {
         alert(data.error || 'Failed to add to cart');
       } else {
-        // success: maybe show a mini-toast or redirect to cart
         addToCartBtn.textContent = 'Added ✓';
         setTimeout(()=> addToCartBtn.textContent = 'Add to cart', 1500);
+        refreshCartSidebar();
       }
     } catch (err) {
       console.error(err);
@@ -308,18 +378,12 @@
         }
       }
 
-      // Full Description
-      if (product.description && product.description.trim()) {
-        const fullDescContainer = $('#product-full-description');
-        if (fullDescContainer) {
-            fullDescContainer.textContent = product.description;
-            $('#product-full-description-section').classList.remove('d-none');
-        }
-      }
-
       // Related & Proposed Products
       fetchAndRenderProductList(product.related_products, '#related-products-list', '#related-products-section');
       fetchAndRenderProductList(product.proposed_products, '#proposed-products-list', '#proposed-products-section');
+
+      // Refresh cart sidebar on init
+      refreshCartSidebar();
 
       // ensure images arrays exist
       product.images = product.images || [];
@@ -340,6 +404,8 @@
       }
 
       addToCartBtn.addEventListener('click', addToCart);
+      const goToCartBtn = $('#go-to-cart');
+      if (goToCartBtn) goToCartBtn.addEventListener('click', goToCart);
 
       if (prevBtn) {
         prevBtn.addEventListener('click', () => {
@@ -401,12 +467,8 @@
     } catch (err) {
       console.error(err);
       productName.textContent = 'Product not found';
-      productDescription.textContent = '';
     }
   }
-
-  // CSS class names injection for selected outline (if not in stylesheet)
-  
 
   init();
 })();
