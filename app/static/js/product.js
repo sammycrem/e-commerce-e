@@ -111,13 +111,14 @@
             <a href="/product/${encodeURIComponent(item.product_sku)}" class="flex-shrink-0">
                <img src="${img}" alt="${item.product_name}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;">
             </a>
-            <div class="d-flex flex-column align-items-center gap-2">
+            <div class="d-flex flex-column align-items-center gap-1" style="flex-grow: 1;">
+               <div class="size-badge-cart bg-danger text-white fw-bold d-flex align-items-center justify-content-center mb-1" style="width: 100%; height: 28px; border-radius: 4px; font-size: 1.2rem;">${item.size || ''}</div>
                <div class="qty-box">
                  <button type="button" class="minus">-</button>
                  <span class="qty-val">${item.quantity}</span>
                  <button type="button" class="plus">+</button>
                </div>
-               <div class="sidebar-price">${formatPrice(item.unit_price_cents)}</div>
+               <div class="sidebar-price mt-1">${formatPrice(item.unit_price_cents)}</div>
             </div>
           </div>
           <div class="fw-bold text-center text-muted small">${item.product_name}</div>
@@ -193,6 +194,9 @@
     wrapper.appendChild(img);
 
     wrapper.addEventListener('click', () => {
+      setActiveImage(index);
+    });
+    wrapper.addEventListener('mouseenter', () => {
       setActiveImage(index);
     });
     wrapper.addEventListener('keydown', (e) => {
@@ -462,7 +466,7 @@
           const y = ((e.clientY - rect.top) / rect.height) * 100;
 
           mainImage.style.transformOrigin = `${x}% ${y}%`;
-          mainImage.style.transform = 'scale(2.5)';
+          mainImage.style.transform = 'scale(2)';
         });
 
         mainImageWrap.addEventListener('mouseenter', () => {
