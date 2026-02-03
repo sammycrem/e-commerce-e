@@ -525,7 +525,7 @@ def convert_to_webp(input_path, output_path, quality=85):
         logger.error(f"Error converting image to webp: {e}")
         return False
 
-def generate_image_icon(input_path, output_path, height=300):
+def generate_image_icon(input_path, output_path, height=350):
     """
     Generates a small version of the image with a fixed height.
     Maintains aspect ratio for the width.
@@ -569,7 +569,7 @@ def ensure_icon_for_url(url, app_root_path):
     output_path = base + "_icon.webp"
 
     if not os.path.exists(output_path):
-        generate_image_icon(input_path, output_path, height=300)
+        generate_image_icon(input_path, output_path, height=350)
 # ---------end------------
 
 def rename_image(old_name, new_name, upload_folder):

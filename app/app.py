@@ -742,7 +742,7 @@ def admin_upload_image():
         # Generate small version (icon)
         icon_filename = unique_base + "_icon.webp"
         icon_path = os.path.join(app.root_path, 'static', 'uploads', 'products', icon_filename)
-        generate_image_icon(filepath, icon_path, height=300)
+        generate_image_icon(filepath, icon_path, height=350)
 
         url = f"/static/uploads/products/{unique_filename}"
         return jsonify({"url": url}), 201

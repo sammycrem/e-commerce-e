@@ -9,7 +9,7 @@
   // helpers
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const formatPrice = cents => `$${(cents/100).toFixed(2)}`;
+  const formatPrice = cents => `€${(cents/100).toFixed(2)}`;
 
   function getIconUrl(url) {
     if (!url || !url.includes('/static/')) return url;
@@ -375,13 +375,19 @@
       // Render tags
       renderTags(product);
 
-      // Product Details
-      if (product.product_details && product.product_details.trim()) {
+      // Product Details & Description
+      if ((product.product_details && product.product_details.trim()) || (product.description && product.description.trim())) {
         const detailContainer = $('#product-details-container');
-        if (detailContainer) {
+        const descContainer = $('#full-description-container');
+
+        if (detailContainer && product.product_details) {
             detailContainer.textContent = product.product_details;
-            $('#product-details-section').classList.remove('d-none');
         }
+        if (descContainer && product.description) {
+            descContainer.textContent = product.description;
+        }
+
+        $('#product-details-section').classList.remove('d-none');
       }
 
       // Related & Proposed Products

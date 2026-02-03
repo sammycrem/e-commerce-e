@@ -190,7 +190,7 @@
                 <!-- Tags will be injected here -->
             </div>
             <h3 id="product-name" class="fw-bold mb-2">Loading...</h3>
-            <p id="product-price" class="h4 text-primary fw-bold mb-4">$0.00</p>
+            <p id="product-price" class="h4 text-primary fw-bold mb-4">€0.00</p>
 
             <div id="product-description" class="text-muted mb-4 small"></div>
 
@@ -214,7 +214,7 @@
                 <!-- Quantity -->
                 <div class="mb-4">
                     <label for="qty-input" class="form-label fw-bold small text-uppercase text-muted mb-2">Quantity</label>
-                    <div class="input-group" style="width: 140px;">
+                    <div class="input-group" style="width: 150px;">
                         <button class="btn btn-outline-secondary btn-sm" type="button" onclick="document.getElementById('qty-input').stepDown()">-</button>
                         <input id="qty-input" type="number" min="1" value="1" class="form-control text-center">
                         <button class="btn btn-outline-secondary btn-sm" type="button" onclick="document.getElementById('qty-input').stepUp()">+</button>
@@ -240,7 +240,7 @@
         <div class="col-lg-2 d-none d-lg-block border-start p-3 bg-white sticky-top" style="height: 100vh; overflow-y: auto;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="fw-bold mb-0">Your Cart</h5>
-                <h5 id="sidebar-total" class="fw-bold mb-0 text-primary">$0.00</h5>
+                <h5 id="sidebar-total" class="fw-bold mb-0 text-primary">€0.00</h5>
             </div>
 
             <div id="sidebar-cart-list" class="d-flex flex-column gap-3 mb-4">
@@ -258,8 +258,13 @@
         <div id="product-details-section" class="row mt-5 pt-4 d-none border-top">
             <div class="col-12">
                 <h4 class="fw-bold mb-4">Product Details</h4>
-                <div id="product-details-container" class="text-muted" style="white-space: pre-line; line-height: 1.6;">
+                <div id="product-details-container" class="text-muted mb-5" style="white-space: pre-line; line-height: 1.6;">
                     <!-- Product details injected here -->
+                </div>
+
+                <h4 class="fw-bold mb-4">Product Description</h4>
+                <div id="full-description-container" class="text-muted" style="white-space: pre-line; line-height: 1.6;">
+                    <!-- Full description injected here -->
                 </div>
             </div>
         </div>
