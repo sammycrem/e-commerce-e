@@ -460,24 +460,37 @@
       // Zoom feature
       const mainImageWrap = $('.main-image-wrap');
       if (mainImageWrap && mainImage) {
-        mainImageWrap.addEventListener('mousemove', (e) => {
+        let isZoomed = false;
+
+        function updateZoom(e) {
+          if (!isZoomed) return;
           const rect = mainImageWrap.getBoundingClientRect();
           const x = ((e.clientX - rect.left) / rect.width) * 100;
           const y = ((e.clientY - rect.top) / rect.height) * 100;
-
           mainImage.style.transformOrigin = `${x}% ${y}%`;
           mainImage.style.transform = 'scale(2)';
-        });
+        }
 
-        mainImageWrap.addEventListener('mouseenter', () => {
-          mainImageWrap.classList.add('zoomed');
-        });
+        function toggleZoom(e) {
+          isZoomed = !isZoomed;
+          if (isZoomed) {
+            mainImageWrap.classList.add('zoomed');
+            updateZoom(e);
+          } else {
+            resetZoom();
+          }
+        }
 
-        mainImageWrap.addEventListener('mouseleave', () => {
+        function resetZoom() {
+          isZoomed = false;
           mainImageWrap.classList.remove('zoomed');
           mainImage.style.transform = 'scale(1)';
           mainImage.style.transformOrigin = 'center center';
-        });
+        }
+
+        mainImageWrap.addEventListener('mousemove', updateZoom);
+        mainImageWrap.addEventListener('click', toggleZoom);
+        mainImageWrap.addEventListener('mouseleave', resetZoom);
       }
 
     } catch (err) {

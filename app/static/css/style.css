@@ -633,6 +633,18 @@ a:hover {
     z-index: 1020;
 }
 
+.dropdown-menu {
+    z-index: 10001 !important;
+}
+
+.main-image-wrap {
+    cursor: zoom-in;
+}
+
+.main-image-wrap.zoomed {
+    cursor: zoom-out;
+}
+
 @media (max-width: 991.98px) {
     .container-fluid {
         padding-left: 15px !important;

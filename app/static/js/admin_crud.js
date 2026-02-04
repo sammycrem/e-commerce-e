@@ -274,7 +274,11 @@
       const p = await res.json();
       $('#product_sku').value = p.product_sku;
       $('#name').value = p.name;
-      $('#category').value = p.category;
+      const catSelect = $('#category');
+      if (catSelect) {
+        catSelect.dataset.pendingValue = p.category;
+        catSelect.value = p.category;
+      }
       $('#base_price').value = (p.base_price_cents / 100).toFixed(2);
       $('#description').value = p.description || '';
       $('#short_description').value = p.short_description || '';
@@ -401,7 +405,36 @@
       showFeedback('New product');
     });
 
+    // --- Category Dropdown Logic ---
+    async function loadCategoryDropdown() {
+      const categorySelect = $('#category');
+      if (!categorySelect) return;
+
+      const res = await fetch('/api/admin/categories');
+      if (res.ok) {
+        const categories = await res.json();
+        updateCategorySelect(categories);
+      }
+    }
+
+    function updateCategorySelect(categories) {
+      const categorySelect = $('#category');
+      if (!categorySelect) return;
+
+      const desiredVal = categorySelect.dataset.pendingValue || categorySelect.value;
+      categorySelect.innerHTML = '<option value="">Select Category</option>';
+      categories.forEach(cat => {
+        const opt = el('option', { value: cat.name }, cat.name);
+        if (cat.name === desiredVal) opt.selected = true;
+        categorySelect.appendChild(opt);
+      });
+    }
+
+    // Expose for admin_categories.js
+    window.refreshProductCategories = updateCategorySelect;
+
     // Initial load
     loadProducts();
+    loadCategoryDropdown();
   });
 })();

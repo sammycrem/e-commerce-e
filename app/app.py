@@ -134,7 +134,7 @@ def icon_url_filter(url):
         return url
     return base + "_icon.webp"
 
-from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone
+from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category
 
 # -------------------------
 # Login loader
@@ -415,6 +415,14 @@ def setup_database(app):
             zone_na = ShippingZone(name='North America', countries_json=['US','CA'], base_cost_cents=500, cost_per_kg_cents=1000, volumetric_divisor=5000, free_shipping_threshold_cents=10000)
             zone_eu = ShippingZone(name='Europe', countries_json=['DE','FR','IT'], base_cost_cents=700, cost_per_kg_cents=2500, volumetric_divisor=5000, free_shipping_threshold_cents=15000)
             db.session.add_all([zone_na, zone_eu])
+            db.session.commit()
+
+        if not Category.query.first():
+            db.session.add_all([
+                Category(name='Graphic Tees'),
+                Category(name='Accessories'),
+                Category(name='Apparel')
+            ])
             db.session.commit()
 
         if not Product.query.filter_by(product_sku='SAMPLE-SKU').first():
@@ -1332,6 +1340,70 @@ def admin_update_order_shipment(public_order_id):
         "shipped_at": order.shipped_at.isoformat() if order.shipped_at else None
     }), 200
 
+
+
+# -------------------------
+# Admin: Category management APIs
+# -------------------------
+
+@app.route('/api/admin/categories', methods=['GET'])
+@login_required
+def admin_list_categories():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    categories = Category.query.order_by(Category.name).all()
+    return jsonify([{"id": c.id, "name": c.name} for c in categories]), 200
+
+@app.route('/api/admin/categories', methods=['POST'])
+@login_required
+def admin_create_category():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"error": "Category name is required"}), 400
+    if Category.query.filter_by(name=name).first():
+        return jsonify({"error": "Category already exists"}), 409
+
+    category = Category(name=name)
+    db.session.add(category)
+    db.session.commit()
+    return jsonify({"id": category.id, "name": category.name}), 201
+
+@app.route('/api/admin/categories/<int:id>', methods=['PUT'])
+@login_required
+def admin_update_category(id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    category = Category.query.get_or_404(id)
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"error": "Category name is required"}), 400
+
+    existing = Category.query.filter_by(name=name).first()
+    if existing and existing.id != id:
+        return jsonify({"error": "Category name already exists"}), 409
+
+    category.name = name
+    db.session.commit()
+    return jsonify({"id": category.id, "name": category.name}), 200
+
+@app.route('/api/admin/categories/<int:id>', methods=['DELETE'])
+@login_required
+def admin_delete_category(id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    category = Category.query.get_or_404(id)
+    # Check if any product uses this category
+    product_count = Product.query.filter_by(category=category.name).count()
+    if product_count > 0:
+        return jsonify({"error": f"Cannot delete category because it is used by {product_count} products"}), 400
+
+    db.session.delete(category)
+    db.session.commit()
+    return jsonify({"message": "Category deleted"}), 200
 
 
 @app.route('/api/admin/users', methods=['GET'])
