@@ -189,7 +189,7 @@
                 <!-- Tags will be injected here -->
             </div>
             <h3 id="product-name" class="fw-bold mb-2">Loading...</h3>
-            <p id="product-price" class="h4 text-primary fw-bold mb-4">€0.00</p>
+            <p id="product-price" class="h4 text-primary fw-bold mb-4">{{ currency_symbol }}0.00</p>
 
             <div id="product-description" class="text-muted mb-4 small"></div>
 
@@ -230,7 +230,7 @@
             <div class="mt-4 border-top pt-3">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-truck fs-5 me-2 text-muted"></i>
-                    <span class="small">Free Shipping on orders over €150</span>
+                    <span class="small">Free Shipping on orders over {{ currency_symbol }}150</span>
                 </div>
             </div>
         </div>
@@ -239,7 +239,7 @@
         <div class="col-lg-2 d-none d-lg-block border-start p-3 bg-white sticky-top" style="height: 100vh; overflow-y: auto;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="fw-bold mb-0">Your Cart</h5>
-                <h5 id="sidebar-total" class="fw-bold mb-0 text-primary">€0.00</h5>
+                <h5 id="sidebar-total" class="fw-bold mb-0 text-primary">{{ currency_symbol }}0.00</h5>
             </div>
 
             <div id="sidebar-cart-list" class="d-flex flex-column gap-3 mb-4">

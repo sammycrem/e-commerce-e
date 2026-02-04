@@ -151,6 +151,17 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
 
+class GlobalSetting(db.Model):
+    __tablename__ = 'global_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=True)
+
+class AppCurrency(db.Model):
+    __tablename__ = 'app_currencies'
+    id = db.Column(db.Integer, primary_key=True)
+    symbol = db.Column(db.String(10), unique=True, nullable=False)
+
 class Address(db.Model):
     __tablename__ = 'addresses'
     id = db.Column(db.Integer, primary_key=True)

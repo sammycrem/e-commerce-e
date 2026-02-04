@@ -131,12 +131,12 @@
       const stock = el('input', { type: 'number', class: 'form-input variant-stock', placeholder: 'Stock', value: prefill.stock_quantity || 0 });
       const priceMod = el('input', { type: 'text', class: 'form-input variant-price-mod', placeholder: 'Price modifier (e.g. 1.50)', value: prefill.price_modifier_cents ? (prefill.price_modifier_cents / 100).toFixed(2) : '0.00' });
 
-      const finalPriceDisplay = el('div', { class: 'mt-1 small fw-bold text-primary variant-final-price' }, 'Final Price: 0.00 €');
+      const finalPriceDisplay = el('div', { class: 'mt-1 small fw-bold text-primary variant-final-price' }, `Final Price: 0.00 ${window.appConfig.currencySymbol}`);
 
       function updateFinalPrice() {
         const base = parsePriceToCents($('#base_price').value);
         const mod = parsePriceToCents(priceMod.value);
-        finalPriceDisplay.textContent = `Final Price: ${((base + mod) / 100).toFixed(2)} €`;
+        finalPriceDisplay.textContent = `Final Price: ${((base + mod) / 100).toFixed(2)} ${window.appConfig.currencySymbol}`;
       }
 
       priceMod.addEventListener('input', updateFinalPrice);
@@ -226,7 +226,7 @@
       wrapper.appendChild(el('label', {}, 'Color')); wrapper.appendChild(color);
       wrapper.appendChild(el('label', {}, 'Size')); wrapper.appendChild(size);
       wrapper.appendChild(el('label', {}, 'Stock quantity')); wrapper.appendChild(stock);
-      wrapper.appendChild(el('label', {}, 'Price modifier (€)')); wrapper.appendChild(priceMod);
+      wrapper.appendChild(el('label', {}, `Price modifier (${window.appConfig.currencySymbol})`)); wrapper.appendChild(priceMod);
       wrapper.appendChild(finalPriceDisplay);
       wrapper.appendChild(colorDatalist);
       wrapper.appendChild(vImgs);
@@ -249,7 +249,7 @@
         const display = v.querySelector('.variant-final-price');
         const base = parsePriceToCents($('#base_price').value);
         const mod = parsePriceToCents(pm.value);
-        display.textContent = `Final Price: ${((base + mod) / 100).toFixed(2)} €`;
+        display.textContent = `Final Price: ${((base + mod) / 100).toFixed(2)} ${window.appConfig.currencySymbol}`;
       });
     });
 

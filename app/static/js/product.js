@@ -9,7 +9,7 @@
   // helpers
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const formatPrice = cents => `€${(cents/100).toFixed(2)}`;
+  const formatPrice = cents => `${window.appConfig.currencySymbol}${(cents/100).toFixed(2)}`;
 
   function getIconUrl(url) {
     if (!url || !url.includes('/static/')) return url;

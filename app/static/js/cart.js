@@ -17,10 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let cartData = { items: [], subtotal_cents: 0 };
   let lastCalc = null; // keep last calculate-totals response
 
-  // Format cents -> €X.YY
+  // Format cents -> CurrencyX.YY
   function formatPrice(cents) {
     if (typeof cents !== 'number') cents = Number(cents || 0);
-    return `€${(cents / 100).toFixed(2)}`;
+    const symbol = (window.appConfig && window.appConfig.currencySymbol) || '€';
+    return `${symbol}${(cents / 100).toFixed(2)}`;
   }
 
   function getIconUrl(url) {

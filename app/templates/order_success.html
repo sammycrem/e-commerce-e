@@ -54,25 +54,25 @@
                             <hr>
                             <div class="d-flex justify-content-between mb-1 small">
                                 <span>Subtotal:</span>
-                                <span>€{{ "%.2f"|format(order.subtotal_cents / 100) }}</span>
+                                <span>{{ currency_symbol }}{{ "%.2f"|format(order.subtotal_cents / 100) }}</span>
                             </div>
                             {% if order.discount_cents > 0 %}
                             <div class="d-flex justify-content-between mb-1 small text-danger">
                                 <span>Discount:</span>
-                                <span>-€{{ "%.2f"|format(order.discount_cents / 100) }}</span>
+                                <span>-{{ currency_symbol }}{{ "%.2f"|format(order.discount_cents / 100) }}</span>
                             </div>
                             {% endif %}
                             <div class="d-flex justify-content-between mb-1 small">
                                 <span>Shipping:</span>
-                                <span>€{{ "%.2f"|format(order.shipping_cost_cents / 100) }}</span>
+                                <span>{{ currency_symbol }}{{ "%.2f"|format(order.shipping_cost_cents / 100) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2 small">
                                 <span>VAT:</span>
-                                <span>€{{ "%.2f"|format(order.vat_cents / 100) }}</span>
+                                <span>{{ currency_symbol }}{{ "%.2f"|format(order.vat_cents / 100) }}</span>
                             </div>
                             <div class="d-flex justify-content-between fw-bold border-top pt-2">
                                 <span>Total:</span>
-                                <span class="text-primary">€{{ "%.2f"|format(order.total_cents / 100) }}</span>
+                                <span class="text-primary">{{ currency_symbol }}{{ "%.2f"|format(order.total_cents / 100) }}</span>
                             </div>
                         </div>
                     </div>
@@ -100,8 +100,8 @@
                                         <div class="small text-muted">{{ item.variant_sku }}</div>
                                     </td>
                                     <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end">€{{ "%.2f"|format(item.unit_price_cents / 100) }}</td>
-                                    <td class="text-end fw-bold">€{{ "%.2f"|format((item.unit_price_cents * item.quantity) / 100) }}</td>
+                                    <td class="text-end">{{ currency_symbol }}{{ "%.2f"|format(item.unit_price_cents / 100) }}</td>
+                                    <td class="text-end fw-bold">{{ currency_symbol }}{{ "%.2f"|format((item.unit_price_cents * item.quantity) / 100) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

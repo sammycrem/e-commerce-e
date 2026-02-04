@@ -118,8 +118,12 @@ login_manager.session_protection = "strong"
 
 
 @app.context_processor
-def inject_now():
-    return {'now': datetime.now(timezone.utc)}
+def inject_global_settings():
+    currency = GlobalSetting.query.filter_by(key='currency').first()
+    return {
+        'now': datetime.now(timezone.utc),
+        'currency_symbol': currency.value if currency else '€'
+    }
 
 @app.template_filter('icon_url')
 def icon_url_filter(url):
@@ -134,7 +138,7 @@ def icon_url_filter(url):
         return url
     return base + "_icon.webp"
 
-from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category
+from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category, GlobalSetting, AppCurrency
 
 # -------------------------
 # Login loader
@@ -423,6 +427,19 @@ def setup_database(app):
                 Category(name='Accessories'),
                 Category(name='Apparel')
             ])
+            db.session.commit()
+
+        if not AppCurrency.query.first():
+            db.session.add_all([
+                AppCurrency(symbol='€'),
+                AppCurrency(symbol='$'),
+                AppCurrency(symbol='CHF'),
+                AppCurrency(symbol='£')
+            ])
+            db.session.commit()
+
+        if not GlobalSetting.query.filter_by(key='currency').first():
+            db.session.add(GlobalSetting(key='currency', value='€'))
             db.session.commit()
 
         if not Product.query.filter_by(product_sku='SAMPLE-SKU').first():
@@ -1404,6 +1421,81 @@ def admin_delete_category(id):
     db.session.delete(category)
     db.session.commit()
     return jsonify({"message": "Category deleted"}), 200
+
+# -------------------------
+# Admin: Global Settings & Currency APIs
+# -------------------------
+
+@app.route('/api/admin/settings', methods=['GET'])
+@login_required
+def admin_get_settings():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    settings = GlobalSetting.query.all()
+    return jsonify({s.key: s.value for s in settings}), 200
+
+@app.route('/api/admin/settings', methods=['POST'])
+@login_required
+def admin_update_settings():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    data = request.get_json() or {}
+    for key, value in data.items():
+        setting = GlobalSetting.query.filter_by(key=key).first()
+        if setting:
+            setting.value = str(value)
+        else:
+            setting = GlobalSetting(key=key, value=str(value))
+            db.session.add(setting)
+    db.session.commit()
+    return jsonify({"message": "Settings updated"}), 200
+
+@app.route('/api/admin/currencies', methods=['GET'])
+@login_required
+def admin_list_currencies():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    currencies = AppCurrency.query.order_by(AppCurrency.id).all()
+    return jsonify([{"id": c.id, "symbol": c.symbol} for c in currencies]), 200
+
+@app.route('/api/admin/currencies', methods=['POST'])
+@login_required
+def admin_create_currency():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    data = request.get_json() or {}
+    symbol = data.get('symbol', '').strip()
+    if not symbol:
+        return jsonify({"error": "Symbol is required"}), 400
+    if AppCurrency.query.filter_by(symbol=symbol).first():
+        return jsonify({"error": "Currency already exists"}), 409
+
+    currency = AppCurrency(symbol=symbol)
+    db.session.add(currency)
+    db.session.commit()
+    return jsonify({"id": currency.id, "symbol": currency.symbol}), 201
+
+@app.route('/api/admin/currencies/<int:id>', methods=['DELETE'])
+@login_required
+def admin_delete_currency(id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    currency = AppCurrency.query.get_or_404(id)
+
+    # Optional: check if this is the active currency
+    active_currency = GlobalSetting.query.filter_by(key='currency').first()
+    if active_currency and active_currency.value == currency.symbol:
+        return jsonify({"error": "Cannot delete the active currency"}), 400
+
+    db.session.delete(currency)
+    db.session.commit()
+    return jsonify({"message": "Currency deleted"}), 200
+
+# Public settings API
+@app.route('/api/settings', methods=['GET'])
+def get_public_settings():
+    settings = GlobalSetting.query.all()
+    return jsonify({s.key: s.value for s in settings}), 200
 
 
 @app.route('/api/admin/users', methods=['GET'])

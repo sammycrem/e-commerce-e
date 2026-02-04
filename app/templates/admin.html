@@ -19,6 +19,9 @@
         <li class="nav-item" role="presentation">
             <button class="nav-link tab-button" data-tab="categories" id="categories-tab" type="button">Categories</button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-button" data-tab="settings" id="settings-tab" type="button">Settings</button>
+        </li>
     </ul>
 
     <!-- PRODUCTS TAB -->
@@ -63,7 +66,7 @@
                                 <select id="category" class="form-select"></select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">Base Price (€)</label>
+                                <label class="form-label small fw-bold">Base Price (<span class="currency-symbol">{{ currency_symbol }}</span>)</label>
                                 <input id="base_price" type="text" placeholder="e.g. 24.99" class="form-control">
                             </div>
                         </div>
@@ -190,7 +193,7 @@
                                 <label class="form-label small fw-bold">Discount Type</label>
                                 <select id="promo_type" class="form-select">
                                     <option value="PERCENT">Percentage (%)</option>
-                                    <option value="FIXED">Fixed Amount (€)</option>
+                                    <option value="FIXED">Fixed Amount (<span class="currency-symbol">{{ currency_symbol }}</span>)</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -226,6 +229,42 @@
                         <div class="d-flex gap-2 pt-3 border-top">
                             <button id="save-promo" class="btn btn-primary px-4">Save Promo Code</button>
                             <button id="delete-promo" class="btn btn-outline-danger ms-auto">Delete Promo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="tab-content d-none">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h2 class="h5 mb-0">Application Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h3 class="h6 fw-bold mb-3">Global Currency</h3>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Select Active Currency</label>
+                                <select id="active-currency-select" class="form-select"></select>
+                            </div>
+                            <button id="save-settings" class="btn btn-primary px-4">Save Settings</button>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="mb-3">
+                            <h3 class="h6 fw-bold mb-3">Manage Currencies</h3>
+                            <div class="input-group mb-3">
+                                <input type="text" id="new-currency-symbol" class="form-control" placeholder="e.g. ¥">
+                                <button id="add-currency" class="btn btn-outline-primary">Add Currency</button>
+                            </div>
+                            <ul id="currencies-list" class="list-group">
+                                <!-- Loaded via JS -->
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -319,4 +358,5 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="{{ url_for('static', filename='js/admin_orders.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/admin_promo.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/admin_categories.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin_settings.js') }}" defer></script>
 {% endblock %}

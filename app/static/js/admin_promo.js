@@ -73,7 +73,7 @@
               el('small', {}, p.is_active ? 'Active' : 'Inactive')
             ),
             el('p', { class: 'mb-1 small' }, p.description || ''),
-            el('small', {}, `${p.discount_type}: ${p.discount_value}${p.discount_type === 'PERCENT' ? '%' : '€'}`),
+            el('small', {}, `${p.discount_type}: ${p.discount_value}${p.discount_type === 'PERCENT' ? '%' : window.appConfig.currencySymbol}`),
             p.username ? el('div', { class: 'small text-primary' }, `User: ${p.username}`) : null
           );
           item.addEventListener('click', () => loadPromoDetails(p));

@@ -45,7 +45,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             <span class="text-muted small">(4.5)</span>
           </div>
           <div class="d-flex justify-content-between align-items-center">
-            <span class="h4 fw-bold text-primary mb-0">€${(p.base_price_cents/100).toFixed(2)}</span>
+            <span class="h4 fw-bold text-primary mb-0">${window.appConfig.currencySymbol}${(p.base_price_cents/100).toFixed(2)}</span>
             <a href="/product/${p.product_sku}" class="btn btn-primary btn-sm rounded-circle" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
               <i class="bi bi-plus-lg"></i>
             </a>

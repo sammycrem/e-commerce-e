@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalEl = document.getElementById('summary-total');
 
     function formatPrice(cents) {
-        return `€${(cents / 100).toFixed(2)}`;
+        const symbol = (window.appConfig && window.appConfig.currencySymbol) || '€';
+        return `${symbol}${(cents / 100).toFixed(2)}`;
     }
 
     async function refreshSummary(promoCode = '') {
@@ -47,7 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (data.discount_cents > 0) {
-                if (discountEl) discountEl.textContent = `-€${(data.discount_cents / 100).toFixed(2)}`;
+                const symbol = (window.appConfig && window.appConfig.currencySymbol) || '€';
+                if (discountEl) discountEl.textContent = `-${symbol}${(data.discount_cents / 100).toFixed(2)}`;
                 if (discountRow) {
                     discountRow.style.display = 'flex';
                     discountRow.classList.remove('d-none');
