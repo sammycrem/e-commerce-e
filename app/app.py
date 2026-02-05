@@ -10,6 +10,8 @@ from datetime import datetime, timedelta, timezone
 import string
 import random
 import os
+import io
+import csv
 from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, convert_to_webp, generate_image_icon, ensure_icon_for_url, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
 import logging
 import json
@@ -965,6 +967,317 @@ def admin_delete_product(sku):
         db.session.rollback()
         logger.exception("Admin delete failed")
         return jsonify({"error": "Failed to delete product", "details": str(e)}), 500
+
+
+# -------------------------
+# Import / Export Logic
+# -------------------------
+
+def products_to_csv(products):
+    """
+    Convert list of product objects (serialized dicts or model instances) to CSV string.
+    We assume 'products' is a list of serialized product dicts (from serialize_product).
+    """
+    if not products:
+        return ""
+
+    # Define CSV columns (flattened structure)
+    # Complex fields will be JSON strings
+    fieldnames = [
+        "product_sku", "name", "category", "base_price_cents",
+        "description", "short_description", "product_details",
+        "tag1", "tag2", "tag3", "weight_grams",
+        "related_products_json", "proposed_products_json", "dimensions_json",
+        "variants_json", "images_json"
+    ]
+
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+
+    for p in products:
+        row = {
+            "product_sku": p.get("product_sku"),
+            "name": p.get("name"),
+            "category": p.get("category"),
+            "base_price_cents": p.get("base_price_cents"),
+            "description": p.get("description"),
+            "short_description": p.get("short_description"),
+            "product_details": p.get("product_details"),
+            "tag1": p.get("tag1"),
+            "tag2": p.get("tag2"),
+            "tag3": p.get("tag3"),
+            "weight_grams": p.get("weight_grams"),
+            # JSON dump complex fields
+            "related_products_json": json.dumps(p.get("related_products") or []),
+            "proposed_products_json": json.dumps(p.get("proposed_products") or []),
+            "dimensions_json": json.dumps(p.get("dimensions_json") or {}),
+            "variants_json": json.dumps(p.get("variants") or []),
+            "images_json": json.dumps(p.get("images") or [])
+        }
+        writer.writerow(row)
+
+    return output.getvalue()
+
+def parse_products_file(file_storage, file_ext):
+    """
+    Parse uploaded file (JSON or CSV) into a list of product dictionaries.
+    Returns list of dicts.
+    """
+    content = file_storage.read().decode('utf-8')
+
+    if file_ext == 'json':
+        return json.loads(content)
+
+    elif file_ext == 'csv':
+        reader = csv.DictReader(io.StringIO(content))
+        products = []
+        for row in reader:
+            # Reconstruct dictionary from CSV row
+            p = {
+                "product_sku": row.get("product_sku"),
+                "name": row.get("name"),
+                "category": row.get("category"),
+                "base_price_cents": int(row.get("base_price_cents") or 0),
+                "description": row.get("description"),
+                "short_description": row.get("short_description"),
+                "product_details": row.get("product_details"),
+                "tag1": row.get("tag1"),
+                "tag2": row.get("tag2"),
+                "tag3": row.get("tag3"),
+                "weight_grams": int(row.get("weight_grams") or 0) if row.get("weight_grams") else None,
+                "related_products": json.loads(row.get("related_products_json") or "[]"),
+                "proposed_products": json.loads(row.get("proposed_products_json") or "[]"),
+                "dimensions_json": json.loads(row.get("dimensions_json") or "{}"),
+                "variants": json.loads(row.get("variants_json") or "[]"),
+                "images": json.loads(row.get("images_json") or "[]")
+            }
+            products.append(p)
+        return products
+
+    else:
+        raise ValueError("Unsupported file format")
+
+@app.route('/api/admin/products/export', methods=['GET'])
+@login_required
+def admin_export_products():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+
+    fmt = request.args.get('format', 'json').lower()
+
+    # Fetch all products fully loaded
+    products = Product.query.options(joinedload(Product.images), joinedload(Product.variants).joinedload(Variant.images)).order_by(Product.name).all()
+    serialized = [serialize_product(p) for p in products]
+
+    if fmt == 'csv':
+        csv_data = products_to_csv(serialized)
+        return csv_data, 200, {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename=products_export.csv'
+        }
+    else:
+        # Default JSON
+        return jsonify(serialized), 200, {
+            'Content-Disposition': 'attachment; filename=products_export.json'
+        }
+
+@app.route('/api/admin/products/import', methods=['POST'])
+@login_required
+def admin_import_products():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files['file']
+    mode = request.form.get('mode', 'skip') # override, skip, update
+
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    if ext not in ['json', 'csv']:
+        return jsonify({"error": "Invalid file extension. Use .json or .csv"}), 400
+
+    try:
+        products_data = parse_products_file(file, ext)
+    except Exception as e:
+        return jsonify({"error": f"Failed to parse file: {str(e)}"}), 400
+
+    # Process Import
+    try:
+        if mode == 'override':
+            # Delete all products
+            # Need to be careful with cascading deletes.
+            # Deleting all products should cascade to variants/images/etc.
+            # But we might have order items referencing variants?
+            # Models say: OrderItem -> variant_sku (string), not FK to Variant ID?
+            # Let's check model. OrderItem: variant_sku = db.Column(db.Text, nullable=False)
+            # But wait, logic often relies on snapshots.
+            # Variant FKs:
+            # Variant.product_id -> cascade delete.
+            # ProductImage.product_id -> cascade delete.
+            # VariantImage.variant_id -> cascade delete.
+            # So deleting products is safe for product data.
+            db.session.query(ProductImage).delete()
+            db.session.query(VariantImage).delete()
+            db.session.query(Variant).delete()
+            db.session.query(Product).delete()
+            # Do NOT commit here. We want to commit only if insertion succeeds.
+            # db.session.commit()
+
+            # Now insert all
+            for p_data in products_data:
+                _create_product_internal(p_data)
+
+        else:
+            # Skip or Update
+            for p_data in products_data:
+                sku = p_data.get('product_sku')
+                existing = Product.query.filter_by(product_sku=sku).first()
+
+                if existing:
+                    if mode == 'update':
+                        _update_product_internal(existing, p_data)
+                    else: # skip
+                        continue
+                else:
+                    _create_product_internal(p_data)
+
+        db.session.commit()
+        return jsonify({"message": "Import successful"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Import failed")
+        return jsonify({"error": f"Import failed: {str(e)}"}), 500
+
+def _create_product_internal(data):
+    """
+    Helper to create product from dict data (similar to create_product API but without commit/response).
+    """
+    # Validation
+    if not data.get('product_sku'): return
+
+    product = Product(
+        product_sku=data['product_sku'],
+        name=data.get('name', 'Unknown'),
+        description=data.get('description'),
+        short_description=data.get('short_description'),
+        product_details=data.get('product_details'),
+        related_products=data.get('related_products'),
+        proposed_products=data.get('proposed_products'),
+        tag1=data.get('tag1'),
+        tag2=data.get('tag2'),
+        tag3=data.get('tag3'),
+        category=data.get('category'),
+        base_price_cents=int(data.get('base_price_cents') or 0),
+        weight_grams=data.get('weight_grams'),
+        dimensions_json=data.get('dimensions_json')
+    )
+    db.session.add(product)
+    db.session.flush()
+
+    for idx, img in enumerate(data.get('images', [])):
+        url = img.get('url') if isinstance(img, dict) else str(img)
+        alt = img.get('alt_text') if isinstance(img, dict) else ''
+        order = int(img.get('display_order', img.get('order', idx)) if isinstance(img, dict) else idx)
+        pimg = ProductImage(product_id=product.id, url=url, alt_text=alt, display_order=order)
+        db.session.add(pimg)
+
+    for v_data in data.get('variants', []):
+        sku = v_data.get('sku')
+        if not sku: continue
+
+        variant = Variant(
+            product_id=product.id,
+            sku=sku,
+            color_name=v_data.get('color_name'),
+            size=v_data.get('size'),
+            stock_quantity=int(v_data.get('stock_quantity') or 0),
+            price_modifier_cents=int(v_data.get('price_modifier_cents') or 0)
+        )
+        db.session.add(variant)
+        db.session.flush()
+
+        for idx, vimg in enumerate(v_data.get('images', []) or []):
+            vurl = vimg.get('url') if isinstance(vimg, dict) else str(vimg)
+            valt = vimg.get('alt_text') if isinstance(vimg, dict) else ''
+            vorder = int(vimg.get('display_order', vimg.get('order', idx)) if isinstance(vimg, dict) else idx)
+            vi = VariantImage(variant_id=variant.id, url=vurl, alt_text=valt, display_order=vorder)
+            db.session.add(vi)
+
+def _update_product_internal(product, data):
+    """
+    Helper to update existing product (similar to update_product API).
+    """
+    product.name = data.get('name', product.name)
+    product.description = data.get('description', product.description)
+    product.short_description = data.get('short_description', product.short_description)
+    product.product_details = data.get('product_details', product.product_details)
+    product.related_products = data.get('related_products', product.related_products)
+    product.proposed_products = data.get('proposed_products', product.proposed_products)
+    product.tag1 = data.get('tag1', product.tag1)
+    product.tag2 = data.get('tag2', product.tag2)
+    product.tag3 = data.get('tag3', product.tag3)
+    product.category = data.get('category', product.category)
+    product.base_price_cents = int(data.get('base_price_cents', product.base_price_cents or 0))
+    product.weight_grams = data.get('weight_grams', product.weight_grams)
+    product.dimensions_json = data.get('dimensions_json', product.dimensions_json)
+
+    # Recreate images
+    ProductImage.query.filter_by(product_id=product.id).delete()
+    for idx, img in enumerate(data.get('images', [])):
+        url = img.get('url') if isinstance(img, dict) else str(img)
+        alt = img.get('alt_text') if isinstance(img, dict) else ''
+        order = int(img.get('display_order', img.get('order', idx)) if isinstance(img, dict) else idx)
+        pimg = ProductImage(product_id=product.id, url=url, alt_text=alt, display_order=order)
+        db.session.add(pimg)
+
+    # Recreate variants
+    # Note: This is aggressive (delete all, re-add). Same as PUT logic.
+    Variant.query.filter_by(product_id=product.id).delete()
+    # Wait, existing variants might be referenced by OrderItems (by SKU).
+    # But logic above for PUT deletes variants too.
+    # "Variant.query.filter(Variant.product_id == product.id).delete(synchronize_session=False)"
+    # My _update_product_internal should mimic that.
+
+    # Actually, simpler to just delete variants and re-add from import.
+    # The existing API logic for PUT does smart merging (update existing if SKU matches).
+    # Ideally I should reuse that. But `_create_product_internal` style is easier for bulk import.
+    # Since import is usually "state of truth", replace is acceptable for "update" mode unless "patch" is implied.
+    # The requirement says "import and update existing data". I'll stick to full update of fields + variants.
+
+    # Prune old variants first
+    existing_vars = Variant.query.filter_by(product_id=product.id).all()
+    for v in existing_vars:
+        db.session.delete(v)
+    db.session.flush()
+
+    for v_data in data.get('variants', []):
+        sku = v_data.get('sku')
+        if not sku: continue
+
+        variant = Variant(
+            product_id=product.id,
+            sku=sku,
+            color_name=v_data.get('color_name'),
+            size=v_data.get('size'),
+            stock_quantity=int(v_data.get('stock_quantity') or 0),
+            price_modifier_cents=int(v_data.get('price_modifier_cents') or 0)
+        )
+        db.session.add(variant)
+        db.session.flush()
+
+        for idx, vimg in enumerate(v_data.get('images', []) or []):
+            vurl = vimg.get('url') if isinstance(vimg, dict) else str(vimg)
+            valt = vimg.get('alt_text') if isinstance(vimg, dict) else ''
+            vorder = int(vimg.get('display_order', vimg.get('order', idx)) if isinstance(vimg, dict) else idx)
+            vi = VariantImage(variant_id=variant.id, url=vurl, alt_text=valt, display_order=vorder)
+            db.session.add(vi)
+
 
 
 # -----------------------------------------------------------------------------

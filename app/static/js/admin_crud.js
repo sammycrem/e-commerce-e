@@ -37,6 +37,86 @@
     const saveBtn = $('#save-product');
     const delBtn = $('#delete-product');
 
+    // --- Import / Export Logic ---
+    const importModalEl = document.getElementById('importModal');
+    let importModal;
+    if (importModalEl && window.bootstrap) {
+        importModal = new bootstrap.Modal(importModalEl);
+    }
+
+    // Export Handlers
+    const exportJsonBtn = $('#btn-export-json');
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/api/admin/products/export?format=json';
+        });
+    }
+
+    const exportCsvBtn = $('#btn-export-csv');
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/api/admin/products/export?format=csv';
+        });
+    }
+
+    // Import Handlers
+    const importBtn = $('#btn-import-products');
+    if (importBtn && importModal) {
+        importBtn.addEventListener('click', () => {
+             // Reset form
+             const form = $('#importForm');
+             if (form) form.reset();
+             importModal.show();
+        });
+    }
+
+    const confirmImportBtn = $('#btn-confirm-import');
+    if (confirmImportBtn) {
+        confirmImportBtn.addEventListener('click', async () => {
+            const fileInput = $('#importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select a file.");
+                return;
+            }
+
+            const mode = document.querySelector('input[name="importMode"]:checked').value;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('mode', mode);
+
+            // Disable button
+            confirmImportBtn.disabled = true;
+            confirmImportBtn.textContent = 'Importing...';
+
+            try {
+                const res = await fetch('/api/admin/products/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showFeedback(data.message || 'Import successful', 'success');
+                    importModal.hide();
+                    loadProducts(); // Refresh list
+                } else {
+                    alert(data.error || 'Import failed');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred during import.');
+            } finally {
+                confirmImportBtn.disabled = false;
+                confirmImportBtn.textContent = 'Import';
+            }
+        });
+    }
+    // ----------------------------
+
     if (!imagesContainer || !variantsContainer) return;
 
     function showFeedback(msg, type = 'info') {
