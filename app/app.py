@@ -141,7 +141,7 @@ def icon_url_filter(url):
         return url
     return base + "_icon.webp"
 
-from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category, GlobalSetting, AppCurrency
+from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category, GlobalSetting, AppCurrency, Address, Message
 
 # -------------------------
 # Login loader
@@ -1986,10 +1986,12 @@ def admin_order_detail(order_id):
 from .blueprints.cart import cart_bp
 from .blueprints.checkout import checkout_bp
 from .blueprints.countries import countries_bp
+from .blueprints.account import account_bp
 
 app.register_blueprint(cart_bp)
 app.register_blueprint(checkout_bp)
 app.register_blueprint(countries_bp)
+app.register_blueprint(account_bp)
 # -------------------------
 # Initialize Database
 # -------------------------

@@ -18,6 +18,7 @@ class User(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     orders = db.relationship('Order', back_populates='user')
     addresses = db.relationship('Address', back_populates='user', cascade='all, delete-orphan')
+    messages = db.relationship('Message', back_populates='user', cascade='all, delete-orphan')
 
 class Product(db.Model):
     __tablename__ = 'products'
@@ -95,6 +96,7 @@ class Order(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     user = db.relationship('User', back_populates='orders')
     items = db.relationship('OrderItem', back_populates='order', cascade='all, delete-orphan')
+    messages = db.relationship('Message', back_populates='order', cascade='all, delete-orphan')
 
 class OrderItem(db.Model):
     __tablename__ = 'order_items'
@@ -180,3 +182,16 @@ class Address(db.Model):
     phone_number = db.Column(db.String(20))
     is_default = db.Column(db.Boolean, default=False)
     user = db.relationship('User', back_populates='addresses')
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
+    sender_type = db.Column(db.String(10), nullable=False) # 'USER' or 'ADMIN'
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    is_read = db.Column(db.Boolean, default=False)
+
+    user = db.relationship('User', back_populates='messages')
+    order = db.relationship('Order', back_populates='messages')
