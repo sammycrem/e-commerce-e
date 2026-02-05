@@ -80,7 +80,7 @@
                             <div class="form-check flex-grow-1">
                                 <input class="form-check-input" type="radio" name="payment_method" id="bank_transfer" value="bank_transfer">
                                 <label class="form-check-label h6 mb-0 ms-2" for="bank_transfer">
-                                    Bank transfer (+1% if less than €150)
+                                    Bank transfer (+1% if less than {{ currency_symbol }}150)
                                 </label>
                             </div>
                             <i class="bi bi-bank fs-2"></i>
@@ -107,28 +107,28 @@
                     <h2 class="h4 mb-4">Summary</h2>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Subtotal</span>
-                        <span id="summary-subtotal" class="fw-bold" data-subtotal-cents="{{ cart_summary.subtotal_cents }}">€{{ "%.2f"|format(cart_summary.subtotal_cents / 100) }}</span>
+                        <span id="summary-subtotal" class="fw-bold" data-subtotal-cents="{{ cart_summary.subtotal_cents }}">{{ currency_symbol }}{{ "%.2f"|format(cart_summary.subtotal_cents / 100) }}</span>
                     </div>
                     <div id="summary-discount-row" class="d-flex justify-content-between mb-2 text-danger" {% if cart_summary.discount_cents == 0 %}style="display: none !important;"{% endif %}>
                         <span class="">Discount</span>
-                        <span id="summary-discount" class="fw-bold">-€{{ "%.2f"|format(cart_summary.discount_cents / 100) }}</span>
+                        <span id="summary-discount" class="fw-bold">-{{ currency_symbol }}{{ "%.2f"|format(cart_summary.discount_cents / 100) }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Shipping</span>
-                        <span id="summary-shipping" class="fw-bold">€{{ "%.2f"|format(cart_summary.shipping_cost_cents / 100) }}</span>
+                        <span id="summary-shipping" class="fw-bold">{{ currency_symbol }}{{ "%.2f"|format(cart_summary.shipping_cost_cents / 100) }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2 border-top pt-2 mt-2">
                         <span class="text-muted">Grand Total Excl. Tax</span>
-                        <span id="summary-grand-total-excl-tax" class="fw-bold">€{{ "%.2f"|format((cart_summary.subtotal_after_discount_cents + cart_summary.shipping_cost_cents) / 100) }}</span>
+                        <span id="summary-grand-total-excl-tax" class="fw-bold">{{ currency_symbol }}{{ "%.2f"|format((cart_summary.subtotal_after_discount_cents + cart_summary.shipping_cost_cents) / 100) }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-3">
                         <span class="text-muted">VAT</span>
-                        <span id="summary-vat" class="fw-bold">€{{ "%.2f"|format(cart_summary.vat_cents / 100) }}</span>
+                        <span id="summary-vat" class="fw-bold">{{ currency_symbol }}{{ "%.2f"|format(cart_summary.vat_cents / 100) }}</span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-4">
                         <span class="h5 mb-0 fw-bold">Total Due</span>
-                        <span id="summary-total" class="h5 mb-0 fw-bold text-primary">€{{ "%.2f"|format(cart_summary.total_cents / 100) }}</span>
+                        <span id="summary-total" class="h5 mb-0 fw-bold text-primary">{{ currency_symbol }}{{ "%.2f"|format(cart_summary.total_cents / 100) }}</span>
                     </div>
                     <button type="submit" form="payment-methods-form" class="btn btn-primary btn-lg w-100 fw-bold shadow">PROCEED TO CHECKOUT</button>
                 </div>

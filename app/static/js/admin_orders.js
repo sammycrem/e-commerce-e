@@ -55,7 +55,8 @@
   // Format cents to currency string (simple)
   function formatPrice(cents) {
     cents = Number(cents || 0);
-    return `$${(cents / 100).toFixed(2)}`;
+    const symbol = (window.appConfig && window.appConfig.currencySymbol) || '€';
+    return `${symbol}${(cents / 100).toFixed(2)}`;
   }
 
   // -------------------------------

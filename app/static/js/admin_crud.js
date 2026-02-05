@@ -22,6 +22,12 @@
   function $(sel, root = document) { return root.querySelector(sel); }
   function $all(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
 
+  const PREDEFINED_COLORS = [
+    { name: 'White', modifier: 0.0 },
+    { name: 'Red', modifier: 0.20 },
+    { name: 'Black', modifier: 0.10 }
+  ];
+
   document.addEventListener('DOMContentLoaded', () => {
     const imagesContainer = $('#product-images');
     const variantsContainer = $('#variants');
@@ -45,15 +51,68 @@
       return isNaN(val) ? 0 : Math.round(val * 100);
     }
 
+    async function triggerUpload(targetInput) {
+      const fileInput = el('input', { type: 'file', accept: 'image/*' });
+      fileInput.onchange = async () => {
+        if (!fileInput.files.length) return;
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+          showFeedback('Uploading...');
+          const res = await fetch('/api/admin/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (res.ok) {
+            targetInput.value = data.url;
+            showFeedback('Upload successful', 'success');
+          } else {
+            showFeedback(data.error || 'Upload failed', 'error');
+          }
+        } catch (err) {
+          showFeedback('Upload error', 'error');
+          console.error(err);
+        }
+      };
+      fileInput.click();
+    }
+
+    function getIconUrl(url) {
+      if (!url || !url.includes('/static/')) return url;
+      const dotIdx = url.lastIndexOf('.');
+      const base = dotIdx !== -1 ? url.substring(0, dotIdx) : url;
+      if (base.endsWith('_icon')) return url;
+      return base + '_icon.webp';
+    }
+
     // Add product image row
     function addProductImageRow(url = '', alt = '', order = 0) {
-      const row = el('div', { class: 'image-row', 'data-role': 'product-image', style: 'display:flex; gap:8px; margin-bottom:6px;' },
-        el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url }),
+      const urlInput = el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url });
+      const previewImg = el('img', {
+        src: getIconUrl(url) || 'https://via.placeholder.com/50',
+        style: 'width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #eee;'
+      });
+
+      urlInput.addEventListener('input', () => {
+        previewImg.src = getIconUrl(urlInput.value) || 'https://via.placeholder.com/50';
+      });
+
+      const row = el('div', { class: 'image-row', 'data-role': 'product-image' },
+        previewImg,
+        urlInput,
         el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
         el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
+        el('button', { class: 'btn btn-secondary btn-upload', type: 'button' }, 'Upload'),
         el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
       );
-      row.querySelector('button').addEventListener('click', () => row.remove());
+      row.querySelector('.btn-upload').addEventListener('click', () => {
+        triggerUpload(urlInput).then(() => {
+          previewImg.src = getIconUrl(urlInput.value);
+        });
+      });
+      row.querySelector('.btn-danger').addEventListener('click', () => row.remove());
       imagesContainer.appendChild(row);
     }
 
@@ -62,23 +121,66 @@
       const wrapper = el('div', { class: 'variant-fields', style: 'border:1px solid #eee; padding:10px; border-radius:6px; margin-bottom:8px;' });
 
       const sku = el('input', { type: 'text', class: 'form-input variant-sku', placeholder: 'Variant SKU', value: prefill.sku || '' });
-      const color = el('input', { type: 'text', class: 'form-input variant-color', placeholder: 'Color', value: prefill.color_name || '' });
-      const size = el('input', { type: 'text', class: 'form-input variant-size', placeholder: 'Size', value: prefill.size || '' });
+
+      const colorListId = 'colors-' + Math.random().toString(36).substr(2, 9);
+      const colorDatalist = el('datalist', { id: colorListId });
+      PREDEFINED_COLORS.forEach(c => colorDatalist.appendChild(el('option', { value: c.name })));
+
+      const color = el('input', { type: 'text', class: 'form-input variant-color', placeholder: 'Color (e.g. Red)', value: prefill.color_name || '', list: colorListId });
+      const size = el('input', { type: 'text', class: 'form-input variant-size', placeholder: 'Size (e.g. M)', value: prefill.size || '' });
       const stock = el('input', { type: 'number', class: 'form-input variant-stock', placeholder: 'Stock', value: prefill.stock_quantity || 0 });
       const priceMod = el('input', { type: 'text', class: 'form-input variant-price-mod', placeholder: 'Price modifier (e.g. 1.50)', value: prefill.price_modifier_cents ? (prefill.price_modifier_cents / 100).toFixed(2) : '0.00' });
+
+      const finalPriceDisplay = el('div', { class: 'mt-1 small fw-bold text-primary variant-final-price' }, `Final Price: 0.00 ${window.appConfig.currencySymbol}`);
+
+      function updateFinalPrice() {
+        const base = parsePriceToCents($('#base_price').value);
+        const mod = parsePriceToCents(priceMod.value);
+        finalPriceDisplay.textContent = `Final Price: ${((base + mod) / 100).toFixed(2)} ${window.appConfig.currencySymbol}`;
+      }
+
+      priceMod.addEventListener('input', updateFinalPrice);
+      color.addEventListener('change', () => {
+        const selected = PREDEFINED_COLORS.find(c => c.name.toLowerCase() === color.value.toLowerCase());
+        if (selected) {
+          const base = parsePriceToCents($('#base_price').value);
+          const modCents = Math.round(base * selected.modifier);
+          priceMod.value = (modCents / 100).toFixed(2);
+          updateFinalPrice();
+        }
+      });
+
+      updateFinalPrice();
 
       // container for variant image rows
       const vImgs = el('div', { class: 'variant-images' });
 
       // function to add one variant-image row (used for both prefill and "Add image" button)
       function addVariantImageRow(url = '', alt = '', order = 0) {
-        const r = el('div', { class: 'variant-image-row', 'data-role': 'variant-image', style: 'display:flex; gap:8px; margin-bottom:4px;' },
-          el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url }),
+        const vUrlInput = el('input', { type: 'text', class: 'form-input img-url', placeholder: 'Image URL', value: url });
+        const vPreviewImg = el('img', {
+          src: getIconUrl(url) || 'https://via.placeholder.com/40',
+          style: 'width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #eee;'
+        });
+
+        vUrlInput.addEventListener('input', () => {
+          vPreviewImg.src = getIconUrl(vUrlInput.value) || 'https://via.placeholder.com/40';
+        });
+
+        const r = el('div', { class: 'variant-image-row', 'data-role': 'variant-image' },
+          vPreviewImg,
+          vUrlInput,
           el('input', { type: 'text', class: 'form-input img-alt', placeholder: 'Alt text', value: alt }),
           el('input', { type: 'number', class: 'form-input img-order', placeholder: 'Order', value: order }),
+          el('button', { class: 'btn btn-secondary btn-upload', type: 'button' }, 'Upload'),
           el('button', { class: 'btn btn-danger', type: 'button' }, 'Remove')
         );
-        r.querySelector('button').addEventListener('click', () => r.remove());
+        r.querySelector('.btn-upload').addEventListener('click', () => {
+          triggerUpload(vUrlInput).then(() => {
+            vPreviewImg.src = getIconUrl(vUrlInput.value);
+          });
+        });
+        r.querySelector('.btn-danger').addEventListener('click', () => r.remove());
         vImgs.appendChild(r);
       }
 
@@ -93,7 +195,7 @@
       }
 
       // "Add variant image" button
-      const addImg = el('button', { class: 'btn', type: 'button' }, 'Add Variant Image');
+      const addImg = el('button', { class: 'btn btn-outline-primary', type: 'button', style: 'margin-right: 8px;' }, 'Add Variant Image');
       addImg.addEventListener('click', () => addVariantImageRow());
 
       const duplicateBtn = el('button', { class: 'btn btn-outline-primary', type: 'button', style: 'margin-right: 8px;' }, 'Duplicate');
@@ -124,7 +226,9 @@
       wrapper.appendChild(el('label', {}, 'Color')); wrapper.appendChild(color);
       wrapper.appendChild(el('label', {}, 'Size')); wrapper.appendChild(size);
       wrapper.appendChild(el('label', {}, 'Stock quantity')); wrapper.appendChild(stock);
-      wrapper.appendChild(el('label', {}, 'Price modifier in USD')); wrapper.appendChild(priceMod);
+      wrapper.appendChild(el('label', {}, `Price modifier (${window.appConfig.currencySymbol})`)); wrapper.appendChild(priceMod);
+      wrapper.appendChild(finalPriceDisplay);
+      wrapper.appendChild(colorDatalist);
       wrapper.appendChild(vImgs);
       wrapper.appendChild(addImg);
       wrapper.appendChild(duplicateBtn);
@@ -138,6 +242,16 @@
 
     addProductImageRow();
     addVariantRow();
+
+    $('#base_price').addEventListener('input', () => {
+      $all('.variant-fields').forEach(v => {
+        const pm = v.querySelector('.variant-price-mod');
+        const display = v.querySelector('.variant-final-price');
+        const base = parsePriceToCents($('#base_price').value);
+        const mod = parsePriceToCents(pm.value);
+        display.textContent = `Final Price: ${((base + mod) / 100).toFixed(2)} ${window.appConfig.currencySymbol}`;
+      });
+    });
 
     // Load products list
     async function loadProducts() {
@@ -160,9 +274,24 @@
       const p = await res.json();
       $('#product_sku').value = p.product_sku;
       $('#name').value = p.name;
-      $('#category').value = p.category;
+      const catSelect = $('#category');
+      if (catSelect) {
+        catSelect.dataset.pendingValue = p.category;
+        catSelect.value = p.category;
+      }
       $('#base_price').value = (p.base_price_cents / 100).toFixed(2);
-      $('#description').value = p.description;
+      $('#description').value = p.description || '';
+      $('#short_description').value = p.short_description || '';
+      $('#product_details').value = p.product_details || '';
+      $('#related_products').value = (p.related_products || []).join(', ');
+      $('#proposed_products').value = (p.proposed_products || []).join(', ');
+      $('#tag1').value = p.tag1 || '';
+      $('#tag2').value = p.tag2 || '';
+      $('#tag3').value = p.tag3 || '';
+      $('#weight_grams').value = p.weight_grams || 0;
+      $('#length').value = p.dimensions_json?.length || 0;
+      $('#width').value = p.dimensions_json?.width || 0;
+      $('#height').value = p.dimensions_json?.height || 0;
       imagesContainer.innerHTML = '';
       (p.images || []).forEach(img => addProductImageRow(img.url, img.alt_text || img.alt || '', img.display_order || img.order || 0));
       variantsContainer.innerHTML = '';
@@ -178,6 +307,19 @@
         name: $('#name').value.trim(),
         category: $('#category').value.trim(),
         description: $('#description').value.trim(),
+        short_description: $('#short_description').value.trim(),
+        product_details: $('#product_details').value.trim(),
+        related_products: $('#related_products').value.split(',').map(s => s.trim()).filter(s => s),
+        proposed_products: $('#proposed_products').value.split(',').map(s => s.trim()).filter(s => s),
+        tag1: $('#tag1').value.trim(),
+        tag2: $('#tag2').value.trim(),
+        tag3: $('#tag3').value.trim(),
+        weight_grams: parseInt($('#weight_grams').value || '0'),
+        dimensions_json: {
+          length: parseInt($('#length').value || '0'),
+          width: parseInt($('#width').value || '0'),
+          height: parseInt($('#height').value || '0')
+        },
         base_price_cents: parsePriceToCents($('#base_price').value),
         images: [],
         variants: []
@@ -245,7 +387,7 @@
         showFeedback('Deleted', 'success');
         loadProducts();
         // reset editor
-        ['product_sku', 'name', 'category', 'base_price', 'description'].forEach(id => $(`#${id}`).value = '');
+        ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3', 'weight_grams', 'length', 'width', 'height'].forEach(id => $(`#${id}`).value = '');
         imagesContainer.innerHTML = '';
         variantsContainer.innerHTML = '';
         saveBtn.dataset.editSku = '';
@@ -254,7 +396,7 @@
 
     // New product button
     if (newBtn) newBtn.addEventListener('click', () => {
-      ['product_sku', 'name', 'category', 'base_price', 'description'].forEach(id => $(`#${id}`).value = '');
+      ['product_sku', 'name', 'category', 'base_price', 'description', 'short_description', 'product_details', 'related_products', 'proposed_products', 'tag1', 'tag2', 'tag3', 'weight_grams', 'length', 'width', 'height'].forEach(id => $(`#${id}`).value = '');
       imagesContainer.innerHTML = '';
       variantsContainer.innerHTML = '';
       addProductImageRow();
@@ -263,7 +405,36 @@
       showFeedback('New product');
     });
 
+    // --- Category Dropdown Logic ---
+    async function loadCategoryDropdown() {
+      const categorySelect = $('#category');
+      if (!categorySelect) return;
+
+      const res = await fetch('/api/admin/categories');
+      if (res.ok) {
+        const categories = await res.json();
+        updateCategorySelect(categories);
+      }
+    }
+
+    function updateCategorySelect(categories) {
+      const categorySelect = $('#category');
+      if (!categorySelect) return;
+
+      const desiredVal = categorySelect.dataset.pendingValue || categorySelect.value;
+      categorySelect.innerHTML = '<option value="">Select Category</option>';
+      categories.forEach(cat => {
+        const opt = el('option', { value: cat.name }, cat.name);
+        if (cat.name === desiredVal) opt.selected = true;
+        categorySelect.appendChild(opt);
+      });
+    }
+
+    // Expose for admin_categories.js
+    window.refreshProductCategories = updateCategorySelect;
+
     // Initial load
     loadProducts();
+    loadCategoryDropdown();
   });
 })();

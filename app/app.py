@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import string
 import random
 import os
-from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
+from .utils import check_string_number_inclusion, concatenate_text_files, create_directory, download_file, download_image, encrypt_password, generate_id, generate_key, get_folders_in_directory, get_json_image_id, is_valid_image, rename_image, resize_image, convert_to_webp, generate_image_icon, ensure_icon_for_url, send_email, init_config, send_emailTls2, str_to_bool, process_image_data, translate
 import logging
 import json
 from werkzeug.utils import secure_filename
@@ -18,7 +18,6 @@ import uuid
 from openai import OpenAI
 import requests
 from flask_cors import CORS
-import uuid
 from math import ceil
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -119,10 +118,27 @@ login_manager.session_protection = "strong"
 
 
 @app.context_processor
-def inject_now():
-    return {'now': datetime.now(timezone.utc)}
+def inject_global_settings():
+    currency = GlobalSetting.query.filter_by(key='currency').first()
+    return {
+        'now': datetime.now(timezone.utc),
+        'currency_symbol': currency.value if currency else '€'
+    }
 
-from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone
+@app.template_filter('icon_url')
+def icon_url_filter(url):
+    if not url:
+        return url
+    # Handle external URLs or placeholders — only process local static assets
+    if '/static/' not in url:
+        return url
+
+    base, _ = os.path.splitext(url)
+    if base.endswith("_icon"):
+        return url
+    return base + "_icon.webp"
+
+from .models import User, Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category, GlobalSetting, AppCurrency
 
 # -------------------------
 # Login loader
@@ -219,11 +235,25 @@ def create_product_data(product_key):
         {"url": f"{BASE_IMAGE_URL}/{product_key}/c-3.webp", "alt_text": f"{product_key} black 3", "display_order": 8},
     ]
 
+    # Related/Proposed logic
+    related = []
+    proposed = []
+    if sku == "p-1":
+        related = ["p-2", "p-3"]
+        proposed = ["p-4"]
+
     return {
         "product_sku": sku,
         "name": name,
         "category": category,
         "description": description,
+        "short_description": f"Short desc for {sku}",
+        "product_details": f"Detailed info for {sku}",
+        "related_products": related,
+        "proposed_products": proposed,
+        "tag1": "tag1",
+        "tag2": "tag2",
+        "tag3": "tag3",
         "base_price_cents": base_price_cents,
         "image_url": product_image_url,
         "images": product_images,
@@ -242,6 +272,13 @@ def insert_product(session, pdata):
         product_sku=sku,
         name=pdata["name"],
         description=pdata.get("description"),
+        short_description=pdata.get("short_description"),
+        product_details=pdata.get("product_details"),
+        related_products=pdata.get("related_products"),
+        proposed_products=pdata.get("proposed_products"),
+        tag1=pdata.get("tag1"),
+        tag2=pdata.get("tag2"),
+        tag3=pdata.get("tag3"),
         category=pdata.get("category"),
         base_price_cents=int(pdata["base_price_cents"])
     )
@@ -249,9 +286,11 @@ def insert_product(session, pdata):
     session.flush()
 
     for idx, img in enumerate(pdata.get("images", [])):
+        url = img["url"]
+        ensure_icon_for_url(url, app.root_path)
         pi = ProductImage(
             product_id=product.id,
-            url=img["url"],
+            url=url,
             alt_text=img.get("alt_text", ""),
             display_order=int(img.get("display_order", idx))
         )
@@ -269,9 +308,11 @@ def insert_product(session, pdata):
         session.add(variant)
         session.flush()
         for idx, vi in enumerate(v.get("images", []) or []):
+            vurl = vi.get("url")
+            ensure_icon_for_url(vurl, app.root_path)
             vimg = VariantImage(
                 variant_id=variant.id,
-                url=vi.get("url"),
+                url=vurl,
                 alt_text=vi.get("alt_text", ""),
                 display_order=idx
             )
@@ -291,6 +332,7 @@ def serialize_variant(variant):
         "color_name": variant.color_name,
         "size": variant.size,
         "stock_quantity": variant.stock_quantity,
+        "price_modifier_cents": variant.price_modifier_cents,
         "final_price_cents": int((variant.product.base_price_cents or 0) + (variant.price_modifier_cents or 0)),
         "images": [serialize_image(img) for img in variant.images]
     }
@@ -302,6 +344,15 @@ def serialize_product(product):
         "description": product.description,
         "category": product.category,
         "base_price_cents": product.base_price_cents,
+        "short_description": product.short_description,
+        "product_details": product.product_details,
+        "related_products": product.related_products or [],
+        "proposed_products": product.proposed_products or [],
+        "tag1": product.tag1,
+        "tag2": product.tag2,
+        "tag3": product.tag3,
+        "weight_grams": product.weight_grams,
+        "dimensions_json": product.dimensions_json or {"length": 0, "width": 0, "height": 0},
         "images": [serialize_image(img) for img in product.images],
         "variants": [serialize_variant(var) for var in product.variants]
     }
@@ -370,6 +421,27 @@ def setup_database(app):
             db.session.add_all([zone_na, zone_eu])
             db.session.commit()
 
+        if not Category.query.first():
+            db.session.add_all([
+                Category(name='Graphic Tees'),
+                Category(name='Accessories'),
+                Category(name='Apparel')
+            ])
+            db.session.commit()
+
+        if not AppCurrency.query.first():
+            db.session.add_all([
+                AppCurrency(symbol='€'),
+                AppCurrency(symbol='$'),
+                AppCurrency(symbol='CHF'),
+                AppCurrency(symbol='£')
+            ])
+            db.session.commit()
+
+        if not GlobalSetting.query.filter_by(key='currency').first():
+            db.session.add(GlobalSetting(key='currency', value='€'))
+            db.session.commit()
+
         if not Product.query.filter_by(product_sku='SAMPLE-SKU').first():
             product = Product(
                 product_sku='SAMPLE-SKU',
@@ -381,15 +453,16 @@ def setup_database(app):
             db.session.add(product)
             db.session.flush()
 
-            variant = Variant(
-                product_id=product.id,
-                sku='SAMPLE-SKU-VAR',
-                color_name='Red',
-                size='M',
-                stock_quantity=10,
-                price_modifier_cents=0
-            )
-            db.session.add(variant)
+            if not Variant.query.filter_by(sku='SAMPLE-SKU-VAR').first():
+                variant = Variant(
+                    product_id=product.id,
+                    sku='SAMPLE-SKU-VAR',
+                    color_name='Red',
+                    size='M',
+                    stock_quantity=10,
+                    price_modifier_cents=0
+                )
+                db.session.add(variant)
             db.session.commit()
 
         # --- Seeding playground data ---
@@ -398,6 +471,8 @@ def setup_database(app):
         try:
             for i in range(1, PRODUCT_COUNT + 1):
                 key = f"p-{i}"
+                if Product.query.filter_by(product_sku=key).first():
+                    continue
                 pdata = create_product_data(key)
                 if RECREATE_IF_EXISTS:
                     safe_delete_product_by_sku(db.session, pdata["product_sku"])
@@ -662,6 +737,44 @@ def get_authorized_keys():
         return jsonify({'error': "_not_authorized", 'url': request.remote_addr}), 400
 
 
+@app.route('/api/admin/upload-image', methods=['POST'])
+@login_required
+def admin_upload_image():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Add uuid to avoid name collisions
+        unique_base = f"{uuid.uuid4()}_{os.path.splitext(filename)[0]}"
+        unique_filename = unique_base + ".webp"
+        filepath = os.path.join(app.root_path, 'static', 'uploads', 'products', unique_filename)
+
+        # Save temp file then convert to webp
+        temp_path = os.path.join(app.root_path, 'static', 'uploads', 'products', "temp_" + filename)
+        file.save(temp_path)
+        convert_to_webp(temp_path, filepath)
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+        # Generate small version (icon)
+        icon_filename = unique_base + "_icon.webp"
+        icon_path = os.path.join(app.root_path, 'static', 'uploads', 'products', icon_filename)
+        generate_image_icon(filepath, icon_path, height=350)
+
+        url = f"/static/uploads/products/{unique_filename}"
+        return jsonify({"url": url}), 201
+
+    return jsonify({"error": "File type not allowed"}), 400
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -723,8 +836,17 @@ def admin_update_product(sku):
         # Basic fields
         product.name = data.get('name', product.name)
         product.description = data.get('description', product.description)
+        product.short_description = data.get('short_description', product.short_description)
+        product.product_details = data.get('product_details', product.product_details)
+        product.related_products = data.get('related_products', product.related_products)
+        product.proposed_products = data.get('proposed_products', product.proposed_products)
+        product.tag1 = data.get('tag1', product.tag1)
+        product.tag2 = data.get('tag2', product.tag2)
+        product.tag3 = data.get('tag3', product.tag3)
         product.category = data.get('category', product.category)
         product.base_price_cents = int(data.get('base_price_cents', product.base_price_cents or 0))
+        product.weight_grams = data.get('weight_grams', product.weight_grams)
+        product.dimensions_json = data.get('dimensions_json', product.dimensions_json)
 
         # Replace product images if images provided
         if 'images' in data:
@@ -829,12 +951,6 @@ def admin_update_product(sku):
         logger.exception("Admin update failed")
         return jsonify({"error": "Failed to update product", "details": str(e)}), 500
 
-
-    except Exception as e:
-        db.session.rollback()
-        logger.exception("Admin update failed")
-        return jsonify({"error": "Failed to update product", "details": str(e)}), 500
-
 # Delete a product (admin)
 @app.route('/api/admin/products/<string:sku>', methods=['DELETE'])
 def admin_delete_product(sku):
@@ -874,8 +990,17 @@ def create_product():
             product_sku=data['product_sku'],
             name=data['name'],
             description=data.get('description'),
+            short_description=data.get('short_description'),
+            product_details=data.get('product_details'),
+            related_products=data.get('related_products'),
+            proposed_products=data.get('proposed_products'),
+            tag1=data.get('tag1'),
+            tag2=data.get('tag2'),
+            tag3=data.get('tag3'),
             category=data.get('category'),
-            base_price_cents=int(data['base_price_cents'])
+            base_price_cents=int(data['base_price_cents']),
+            weight_grams=data.get('weight_grams'),
+            dimensions_json=data.get('dimensions_json')
         )
         db.session.add(product)
         db.session.flush()  # get product.id
@@ -967,6 +1092,20 @@ def get_product(sku):
     ).filter_by(product_sku=sku).first_or_404()
     return jsonify(serialize_product(product)), 200
 
+@app.route('/api/products/batch', methods=['GET'])
+def get_products_batch():
+    skus = request.args.getlist('sku')
+    if not skus:
+        return jsonify([]), 200
+    products = Product.query.options(
+        joinedload(Product.images),
+        joinedload(Product.variants)
+    ).filter(Product.product_sku.in_(skus)).all()
+    # Sort them in the same order as requested SKUs
+    product_map = {p.product_sku: serialize_product(p) for p in products}
+    result = [product_map[sku] for sku in skus if sku in product_map]
+    return jsonify(result), 200
+
 
 
 
@@ -992,8 +1131,17 @@ def update_product(product_sku):
             product.product_sku = data['product_sku']
             product.name = data['name']
             product.description = data.get('description')
+            product.short_description = data.get('short_description')
+            product.product_details = data.get('product_details')
+            product.related_products = data.get('related_products')
+            product.proposed_products = data.get('proposed_products')
+            product.tag1 = data.get('tag1')
+            product.tag2 = data.get('tag2')
+            product.tag3 = data.get('tag3')
             product.category = data.get('category')
             product.base_price_cents = int(data['base_price_cents'])
+            product.weight_grams = data.get('weight_grams')
+            product.dimensions_json = data.get('dimensions_json')
 
             db.session.add(product)
             db.session.flush()  # ensure product.id is present
@@ -1209,6 +1357,145 @@ def admin_update_order_shipment(public_order_id):
         "shipped_at": order.shipped_at.isoformat() if order.shipped_at else None
     }), 200
 
+
+
+# -------------------------
+# Admin: Category management APIs
+# -------------------------
+
+@app.route('/api/admin/categories', methods=['GET'])
+@login_required
+def admin_list_categories():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    categories = Category.query.order_by(Category.name).all()
+    return jsonify([{"id": c.id, "name": c.name} for c in categories]), 200
+
+@app.route('/api/admin/categories', methods=['POST'])
+@login_required
+def admin_create_category():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"error": "Category name is required"}), 400
+    if Category.query.filter_by(name=name).first():
+        return jsonify({"error": "Category already exists"}), 409
+
+    category = Category(name=name)
+    db.session.add(category)
+    db.session.commit()
+    return jsonify({"id": category.id, "name": category.name}), 201
+
+@app.route('/api/admin/categories/<int:id>', methods=['PUT'])
+@login_required
+def admin_update_category(id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    category = Category.query.get_or_404(id)
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({"error": "Category name is required"}), 400
+
+    existing = Category.query.filter_by(name=name).first()
+    if existing and existing.id != id:
+        return jsonify({"error": "Category name already exists"}), 409
+
+    category.name = name
+    db.session.commit()
+    return jsonify({"id": category.id, "name": category.name}), 200
+
+@app.route('/api/admin/categories/<int:id>', methods=['DELETE'])
+@login_required
+def admin_delete_category(id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    category = Category.query.get_or_404(id)
+    # Check if any product uses this category
+    product_count = Product.query.filter_by(category=category.name).count()
+    if product_count > 0:
+        return jsonify({"error": f"Cannot delete category because it is used by {product_count} products"}), 400
+
+    db.session.delete(category)
+    db.session.commit()
+    return jsonify({"message": "Category deleted"}), 200
+
+# -------------------------
+# Admin: Global Settings & Currency APIs
+# -------------------------
+
+@app.route('/api/admin/settings', methods=['GET'])
+@login_required
+def admin_get_settings():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    settings = GlobalSetting.query.all()
+    return jsonify({s.key: s.value for s in settings}), 200
+
+@app.route('/api/admin/settings', methods=['POST'])
+@login_required
+def admin_update_settings():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    data = request.get_json() or {}
+    for key, value in data.items():
+        setting = GlobalSetting.query.filter_by(key=key).first()
+        if setting:
+            setting.value = str(value)
+        else:
+            setting = GlobalSetting(key=key, value=str(value))
+            db.session.add(setting)
+    db.session.commit()
+    return jsonify({"message": "Settings updated"}), 200
+
+@app.route('/api/admin/currencies', methods=['GET'])
+@login_required
+def admin_list_currencies():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    currencies = AppCurrency.query.order_by(AppCurrency.id).all()
+    return jsonify([{"id": c.id, "symbol": c.symbol} for c in currencies]), 200
+
+@app.route('/api/admin/currencies', methods=['POST'])
+@login_required
+def admin_create_currency():
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    data = request.get_json() or {}
+    symbol = data.get('symbol', '').strip()
+    if not symbol:
+        return jsonify({"error": "Symbol is required"}), 400
+    if AppCurrency.query.filter_by(symbol=symbol).first():
+        return jsonify({"error": "Currency already exists"}), 409
+
+    currency = AppCurrency(symbol=symbol)
+    db.session.add(currency)
+    db.session.commit()
+    return jsonify({"id": currency.id, "symbol": currency.symbol}), 201
+
+@app.route('/api/admin/currencies/<int:id>', methods=['DELETE'])
+@login_required
+def admin_delete_currency(id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
+    currency = AppCurrency.query.get_or_404(id)
+
+    # Optional: check if this is the active currency
+    active_currency = GlobalSetting.query.filter_by(key='currency').first()
+    if active_currency and active_currency.value == currency.symbol:
+        return jsonify({"error": "Cannot delete the active currency"}), 400
+
+    db.session.delete(currency)
+    db.session.commit()
+    return jsonify({"message": "Currency deleted"}), 200
+
+# Public settings API
+@app.route('/api/settings', methods=['GET'])
+def get_public_settings():
+    settings = GlobalSetting.query.all()
+    return jsonify({s.key: s.value for s in settings}), 200
 
 
 @app.route('/api/admin/users', methods=['GET'])

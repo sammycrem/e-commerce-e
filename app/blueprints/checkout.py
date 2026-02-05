@@ -72,7 +72,8 @@ def checkout():
 
     # calculate totals using helper
     promo_code = body.get('promo_code')
-    calc_res = calculate_totals_internal(items, shipping_country_iso=shipping_country_iso, promo_code=promo_code, user_id=user_id)
+    shipping_method = body.get('shipping_method', 'standard')
+    calc_res = calculate_totals_internal(items, shipping_country_iso=shipping_country_iso, promo_code=promo_code, shipping_method=shipping_method, user_id=user_id)
 
     subtotal = calc_res['subtotal_cents']
     discount = calc_res['discount_cents']
@@ -162,9 +163,10 @@ def api_calculate_totals():
     items = data.get('items', [])
     country_iso = data.get('shipping_country_iso')
     promo_code = data.get('promo_code')
+    shipping_method = data.get('shipping_method', 'standard')
     user_id = current_user.id if current_user.is_authenticated else None
 
-    result = calculate_totals_internal(items, shipping_country_iso=country_iso, promo_code=promo_code, user_id=user_id)
+    result = calculate_totals_internal(items, shipping_country_iso=country_iso, promo_code=promo_code, shipping_method=shipping_method, user_id=user_id)
     return jsonify(result), 200
 
 @checkout_bp.route('/checkout/login', methods=['GET'])
@@ -316,7 +318,7 @@ def payment_methods():
 
     cart_summary = calculate_totals_internal(items, shipping_country_iso=country_iso, shipping_method=selected_shipping, promo_code=promo_code, user_id=user_id)
 
-    return render_template('payment_methods.html', cart_summary=cart_summary)
+    return render_template('payment_methods.html', cart_summary=cart_summary, country_iso=country_iso, selected_shipping=selected_shipping)
 
 @checkout_bp.route('/checkout/summary', methods=['GET', 'POST'])
 @login_required

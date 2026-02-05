@@ -20,9 +20,10 @@ from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 
-from app import app
-from extensions import db
-from models import Product, Variant, ProductImage, VariantImage
+from app.app import app
+from app.extensions import db
+from app.models import Product, Variant, ProductImage, VariantImage
+from app.utils import ensure_icon_for_url
 
 
 
@@ -113,11 +114,25 @@ def create_product_data(product_key):
         {"url": f"{BASE_URL}/{product_key}/c-3.webp", "alt_text": f"{product_key} black 3", "display_order": 8},
     ]
 
+    # Related/Proposed logic
+    related = []
+    proposed = []
+    if sku == "p-1":
+        related = ["p-2", "p-3"]
+        proposed = ["p-4"]
+
     return {
         "product_sku": sku,
         "name": name,
         "category": category,
         "description": description,
+        "short_description": f"Short desc for {sku}",
+        "product_details": f"Detailed info for {sku}",
+        "related_products": related,
+        "proposed_products": proposed,
+        "tag1": "tag1",
+        "tag2": "tag2",
+        "tag3": "tag3",
         "base_price_cents": base_price_cents,
         "image_url": product_image_url,
         "images": product_images,
@@ -142,6 +157,13 @@ def insert_product(session, pdata):
         product_sku=sku,
         name=pdata["name"],
         description=pdata.get("description"),
+        short_description=pdata.get("short_description"),
+        product_details=pdata.get("product_details"),
+        related_products=pdata.get("related_products"),
+        proposed_products=pdata.get("proposed_products"),
+        tag1=pdata.get("tag1"),
+        tag2=pdata.get("tag2"),
+        tag3=pdata.get("tag3"),
         category=pdata.get("category"),
         base_price_cents=int(pdata["base_price_cents"])
     )
@@ -150,9 +172,11 @@ def insert_product(session, pdata):
 
     # product images
     for idx, img in enumerate(pdata.get("images", [])):
+        url = img["url"]
+        ensure_icon_for_url(url, app.root_path)
         pi = ProductImage(
             product_id=product.id,
-            url=img["url"],
+            url=url,
             alt_text=img.get("alt_text", ""),
             display_order=int(img.get("display_order", idx))
         )
@@ -171,9 +195,11 @@ def insert_product(session, pdata):
         session.add(variant)
         session.flush()
         for idx, vi in enumerate(v.get("images", []) or []):
+            vurl = vi.get("url")
+            ensure_icon_for_url(vurl, app.root_path)
             vimg = VariantImage(
                 variant_id=variant.id,
-                url=vi.get("url"),
+                url=vurl,
                 alt_text=vi.get("alt_text", ""),
                 display_order=idx
             )
@@ -198,25 +224,6 @@ def main():
 
             db.session.commit()
             print("Seeding complete. Created products:", ", ".join(created))
-            print("Seeding playground data...")
-            created = []
-            try:
-                for i in range(1, PRODUCT_COUNT + 1):
-                    key = f"p-{i}"
-                    pdata = create_product_data(key)
-                    if RECREATE_IF_EXISTS:
-                        safe_delete_product_by_sku(db.session, pdata["product_sku"])
-
-                    prod = insert_product(db.session, pdata)
-                    created.append(prod.product_sku)
-
-                db.session.commit()
-                print("Seeding complete. Created products:", ", ".join(created))
-            except Exception as exc:
-                db.session.rollback()
-                print("Error during seeding:", exc)
-                raise
-                
         except Exception as exc:
             db.session.rollback()
             print("Error during seeding:", exc)

@@ -9,7 +9,15 @@
   // helpers
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  const formatPrice = cents => `$${(cents/100).toFixed(2)}`;
+  const formatPrice = cents => `${window.appConfig.currencySymbol}${(cents/100).toFixed(2)}`;
+
+  function getIconUrl(url) {
+    if (!url || !url.includes('/static/')) return url;
+    const dotIdx = url.lastIndexOf('.');
+    const base = dotIdx !== -1 ? url.substring(0, dotIdx) : url;
+    if (base.endsWith('_icon')) return url;
+    return base + '_icon.webp';
+  }
 
   // DOM
   const thumbRail = $('#thumb-rail');
@@ -22,6 +30,147 @@
   const qtyInput = $('#qty-input');
   const addToCartBtn = $('#add-to-cart');
   const variantMessage = $('#variant-message');
+  const prevBtn = $('#prev-image');
+  const nextBtn = $('#next-image');
+
+  // New helper for product cards
+  function createProductCard(p) {
+    const col = document.createElement('div');
+    col.className = 'col';
+    const firstImg = (p.images && p.images[0]) ? getIconUrl(p.images[0].url) : 'https://via.placeholder.com/300';
+    col.innerHTML = `
+      <a href="/product/${encodeURIComponent(p.product_sku)}" class="product-card-sm">
+        <div class="img-wrap">
+          <img src="${firstImg}" alt="${p.name}" loading="lazy">
+        </div>
+        <div class="card-title">${p.name}</div>
+        <div class="card-price">${formatPrice(p.base_price_cents || 0)}</div>
+      </a>
+    `;
+    return col;
+  }
+
+  async function fetchAndRenderProductList(skus, listId, sectionId) {
+    if (!skus || !skus.length) {
+      $(sectionId).classList.add('d-none');
+      return;
+    }
+    const listContainer = $(listId);
+    listContainer.innerHTML = '';
+
+    try {
+      const queryParams = skus.filter(s => !!s).map(s => `sku=${encodeURIComponent(s)}`).join('&');
+      const res = await fetch(`/api/products/batch?${queryParams}`);
+      if (res.ok) {
+        const products = await res.json();
+        if (products && products.length > 0) {
+          products.forEach(p => {
+            listContainer.appendChild(createProductCard(p));
+          });
+          $(sectionId).classList.remove('d-none');
+          return;
+        }
+      }
+    } catch (e) {
+      console.error(`Error fetching batch SKUs:`, e);
+    }
+    $(sectionId).classList.add('d-none');
+  }
+
+  async function refreshCartSidebar() {
+    try {
+      const res = await fetch('/api/cart', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Failed to load cart');
+      const data = await res.json();
+      renderCartSidebar(data);
+    } catch (err) {
+      console.error('refreshCartSidebar error:', err);
+    }
+  }
+
+  function renderCartSidebar(data) {
+    const container = $('#sidebar-cart-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!data || !data.items || data.items.length === 0) {
+      container.innerHTML = '<p class="text-muted small">Your cart is empty.</p>';
+      const totalEl = $('#sidebar-total');
+      if (totalEl) totalEl.textContent = formatPrice(0);
+      return;
+    }
+
+    data.items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'sidebar-item';
+      const img = getIconUrl(item.image_url) || 'https://via.placeholder.com/120';
+
+      div.innerHTML = `
+        <div class="d-flex flex-column gap-2">
+          <div class="d-flex justify-content-between align-items-center gap-2">
+            <a href="/product/${encodeURIComponent(item.product_sku)}" class="flex-shrink-0">
+               <img src="${img}" alt="${item.product_name}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;">
+            </a>
+            <div class="d-flex flex-column align-items-center gap-1" style="flex-grow: 1;">
+               <div class="size-badge-cart bg-danger text-white fw-bold d-flex align-items-center justify-content-center mb-1" style="width: 100%; height: 28px; border-radius: 4px; font-size: 1.2rem;">${item.size || ''}</div>
+               <div class="qty-box">
+                 <button type="button" class="minus">-</button>
+                 <span class="qty-val">${item.quantity}</span>
+                 <button type="button" class="plus">+</button>
+               </div>
+               <div class="sidebar-price mt-1">${formatPrice(item.unit_price_cents)}</div>
+            </div>
+          </div>
+          <div class="fw-bold text-center text-muted small">${item.product_name}</div>
+        </div>
+      `;
+
+      const minusBtn = $('.minus', div);
+      const plusBtn = $('.plus', div);
+
+      minusBtn.addEventListener('click', () => updateCartItem(item.sku, item.quantity - 1));
+      plusBtn.addEventListener('click', () => updateCartItem(item.sku, item.quantity + 1));
+
+      container.appendChild(div);
+    });
+
+    const totalEl = $('#sidebar-total');
+    if (totalEl) totalEl.textContent = formatPrice(data.subtotal_cents || 0);
+  }
+
+  async function updateCartItem(sku, quantity) {
+    try {
+      const res = await fetch('/api/cart', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku, quantity: Math.max(0, quantity) })
+      });
+      if (res.ok) {
+        await refreshCartSidebar();
+      }
+    } catch (err) {
+      console.error('updateCartItem error:', err);
+    }
+  }
+
+  function goToCart() {
+    window.location.href = '/cart';
+  }
+
+  function renderTags(p) {
+    const container = $('#product-tags');
+    if (!container) return;
+    container.innerHTML = '';
+    const tags = [p.tag1, p.tag2, p.tag3].filter(t => t && t.trim());
+    const colors = ['bg-primary', 'bg-info', 'bg-dark'];
+    tags.forEach((tag, i) => {
+        const badge = document.createElement('span');
+        badge.className = `badge tag-badge ${colors[i % colors.length]}`;
+        badge.textContent = tag;
+        container.appendChild(badge);
+    });
+  }
 
   // state
   let product = null;
@@ -39,12 +188,15 @@
     wrapper.className = 'thumb-item';
     wrapper.tabIndex = 0;
     const img = document.createElement('img');
-    img.src = imgObj.url;
+    img.src = getIconUrl(imgObj.url);
     img.alt = imgObj.alt_text || product.name || 'product';
     img.loading = 'lazy';
     wrapper.appendChild(img);
 
     wrapper.addEventListener('click', () => {
+      setActiveImage(index);
+    });
+    wrapper.addEventListener('mouseenter', () => {
       setActiveImage(index);
     });
     wrapper.addEventListener('keydown', (e) => {
@@ -71,9 +223,14 @@
     thumbRail.innerHTML = '';
     if (!images || images.length === 0) {
       thumbRail.style.display = 'none';
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
       return;
     }
     thumbRail.style.display = '';
+
+    if (prevBtn) prevBtn.style.display = images.length > 1 ? '' : 'none';
+    if (nextBtn) nextBtn.style.display = images.length > 1 ? '' : 'none';
     images.forEach((img, idx) => {
       const t = createThumb(img, idx);
       thumbRail.appendChild(t);
@@ -96,7 +253,7 @@
     for (const [color, arr] of colorMap.entries()) {
       // pick variant that has images or first in array
       const firstVariant = arr.find(x => x.images && x.images.length) || arr[0];
-      const swatchImg = firstVariant && firstVariant.images && firstVariant.images[0] ? firstVariant.images[0].url : (product.images && product.images[0] && product.images[0].url) || '';
+      const swatchImg = firstVariant && firstVariant.images && firstVariant.images[0] ? getIconUrl(firstVariant.images[0].url) : getIconUrl((product.images && product.images[0] && product.images[0].url) || '');
       const swatch = document.createElement('button');
       swatch.className = 'swatch';
       swatch.type = 'button';
@@ -198,9 +355,9 @@
       if (!res.ok) {
         alert(data.error || 'Failed to add to cart');
       } else {
-        // success: maybe show a mini-toast or redirect to cart
         addToCartBtn.textContent = 'Added ✓';
         setTimeout(()=> addToCartBtn.textContent = 'Add to cart', 1500);
+        refreshCartSidebar();
       }
     } catch (err) {
       console.error(err);
@@ -216,8 +373,33 @@
       product = await res.json();
 
       productName.textContent = product.name;
-      productDescription.textContent = product.description || '';
+      productDescription.textContent = product.short_description || product.description || '';
       productPrice.textContent = formatPrice(product.base_price_cents || 0);
+
+      // Render tags
+      renderTags(product);
+
+      // Product Details & Description
+      if ((product.product_details && product.product_details.trim()) || (product.description && product.description.trim())) {
+        const detailContainer = $('#product-details-container');
+        const descContainer = $('#full-description-container');
+
+        if (detailContainer && product.product_details) {
+            detailContainer.textContent = product.product_details;
+        }
+        if (descContainer && product.description) {
+            descContainer.textContent = product.description;
+        }
+
+        $('#product-details-section').classList.remove('d-none');
+      }
+
+      // Related & Proposed Products
+      fetchAndRenderProductList(product.related_products, '#related-products-list', '#related-products-section');
+      fetchAndRenderProductList(product.proposed_products, '#proposed-products-list', '#proposed-products-section');
+
+      // Refresh cart sidebar on init
+      refreshCartSidebar();
 
       // ensure images arrays exist
       product.images = product.images || [];
@@ -238,6 +420,28 @@
       }
 
       addToCartBtn.addEventListener('click', addToCart);
+      const goToCartBtn = $('#go-to-cart');
+      if (goToCartBtn) goToCartBtn.addEventListener('click', goToCart);
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          if (!currentGallery || currentGallery.length < 2) return;
+          const thumbs = $$('.thumb-item', thumbRail);
+          const activeIndex = thumbs.findIndex(t => t.classList.contains(SELECTED_OUTLINE_STYLE));
+          const newIndex = (activeIndex - 1 + currentGallery.length) % currentGallery.length;
+          setActiveImage(newIndex);
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          if (!currentGallery || currentGallery.length < 2) return;
+          const thumbs = $$('.thumb-item', thumbRail);
+          const activeIndex = thumbs.findIndex(t => t.classList.contains(SELECTED_OUTLINE_STYLE));
+          const newIndex = (activeIndex + 1) % currentGallery.length;
+          setActiveImage(newIndex);
+        });
+      }
 
       // keyboard accessibility: left/right arrows cycle thumbs
       document.addEventListener('keydown', (e) => {
@@ -253,15 +457,47 @@
         }
       });
 
+      // Zoom feature
+      const mainImageWrap = $('.main-image-wrap');
+      if (mainImageWrap && mainImage) {
+        let isZoomed = false;
+
+        function updateZoom(e) {
+          if (!isZoomed) return;
+          const rect = mainImageWrap.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+          mainImage.style.transformOrigin = `${x}% ${y}%`;
+          mainImage.style.transform = 'scale(2)';
+        }
+
+        function toggleZoom(e) {
+          isZoomed = !isZoomed;
+          if (isZoomed) {
+            mainImageWrap.classList.add('zoomed');
+            updateZoom(e);
+          } else {
+            resetZoom();
+          }
+        }
+
+        function resetZoom() {
+          isZoomed = false;
+          mainImageWrap.classList.remove('zoomed');
+          mainImage.style.transform = 'scale(1)';
+          mainImage.style.transformOrigin = 'center center';
+        }
+
+        mainImageWrap.addEventListener('mousemove', updateZoom);
+        mainImageWrap.addEventListener('click', toggleZoom);
+        mainImageWrap.addEventListener('mouseleave', resetZoom);
+      }
+
     } catch (err) {
       console.error(err);
       productName.textContent = 'Product not found';
-      productDescription.textContent = '';
     }
   }
-
-  // CSS class names injection for selected outline (if not in stylesheet)
-  
 
   init();
 })();

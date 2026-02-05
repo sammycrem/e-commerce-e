@@ -17,10 +17,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let cartData = { items: [], subtotal_cents: 0 };
   let lastCalc = null; // keep last calculate-totals response
 
-  // Format cents -> €X.YY
+  // Format cents -> CurrencyX.YY
   function formatPrice(cents) {
     if (typeof cents !== 'number') cents = Number(cents || 0);
-    return `€${(cents / 100).toFixed(2)}`;
+    const symbol = (window.appConfig && window.appConfig.currencySymbol) || '€';
+    return `${symbol}${(cents / 100).toFixed(2)}`;
+  }
+
+  function getIconUrl(url) {
+    if (!url || !url.includes('/static/')) return url;
+    const dotIdx = url.lastIndexOf('.');
+    const base = dotIdx !== -1 ? url.substring(0, dotIdx) : url;
+    if (base.endsWith('_icon')) return url;
+    return base + '_icon.webp';
   }
 
   // Fetch session cart from backend and render
@@ -57,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const productInfo = document.createElement('div');
       productInfo.className = 'product-info';
       const img = document.createElement('img');
-      img.src = item.image_url || 'https://via.placeholder.com/100';
+      img.src = getIconUrl(item.image_url) || 'https://via.placeholder.com/100';
       img.alt = item.product_name || '';
       const details = document.createElement('div');
       const title = document.createElement('p');

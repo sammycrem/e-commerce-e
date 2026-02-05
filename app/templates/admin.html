@@ -16,6 +16,12 @@
         <li class="nav-item" role="presentation">
             <button class="nav-link tab-button" data-tab="promos" id="promos-tab" type="button">Promo Codes</button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-button" data-tab="categories" id="categories-tab" type="button">Categories</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link tab-button" data-tab="settings" id="settings-tab" type="button">Settings</button>
+        </li>
     </ul>
 
     <!-- PRODUCTS TAB -->
@@ -57,17 +63,72 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Category</label>
-                                <input id="category" type="text" placeholder="Category" class="form-control">
+                                <select id="category" class="form-select"></select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">Base Price (€)</label>
+                                <label class="form-label small fw-bold">Base Price (<span class="currency-symbol">{{ currency_symbol }}</span>)</label>
                                 <input id="base_price" type="text" placeholder="e.g. 24.99" class="form-control">
                             </div>
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label class="form-label small fw-bold">Description</label>
                             <textarea id="description" class="form-control" rows="3" placeholder="Description"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Short Description</label>
+                            <textarea id="short_description" class="form-control" rows="2" placeholder="Short Description"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Product Details</label>
+                            <textarea id="product_details" class="form-control" rows="4" placeholder="Product Details"></textarea>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Related Products (SKUs, comma separated)</label>
+                                <input id="related_products" type="text" placeholder="SKU1, SKU2" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Proposed Products (SKUs, comma separated)</label>
+                                <input id="proposed_products" type="text" placeholder="SKU3, SKU4" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Tag 1</label>
+                                <input id="tag1" type="text" placeholder="Tag 1" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Tag 2</label>
+                                <input id="tag2" type="text" placeholder="Tag 2" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Tag 3</label>
+                                <input id="tag3" type="text" placeholder="Tag 3" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Weight (grams)</label>
+                                <input id="weight_grams" type="number" placeholder="e.g. 500" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Length (cm)</label>
+                                <input id="length" type="number" placeholder="Length" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Width (cm)</label>
+                                <input id="width" type="number" placeholder="Width" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Height (cm)</label>
+                                <input id="height" type="number" placeholder="Height" class="form-control">
+                            </div>
                         </div>
 
                         <div class="mb-4">
@@ -132,7 +193,7 @@
                                 <label class="form-label small fw-bold">Discount Type</label>
                                 <select id="promo_type" class="form-select">
                                     <option value="PERCENT">Percentage (%)</option>
-                                    <option value="FIXED">Fixed Amount (€)</option>
+                                    <option value="FIXED">Fixed Amount (<span class="currency-symbol">{{ currency_symbol }}</span>)</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -168,6 +229,83 @@
                         <div class="d-flex gap-2 pt-3 border-top">
                             <button id="save-promo" class="btn btn-primary px-4">Save Promo Code</button>
                             <button id="delete-promo" class="btn btn-outline-danger ms-auto">Delete Promo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="tab-content d-none">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h2 class="h5 mb-0">Application Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <h3 class="h6 fw-bold mb-3">Global Currency</h3>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Select Active Currency</label>
+                                <select id="active-currency-select" class="form-select"></select>
+                            </div>
+                            <button id="save-settings" class="btn btn-primary px-4">Save Settings</button>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="mb-3">
+                            <h3 class="h6 fw-bold mb-3">Manage Currencies</h3>
+                            <div class="input-group mb-3">
+                                <input type="text" id="new-currency-symbol" class="form-control" placeholder="e.g. ¥">
+                                <button id="add-currency" class="btn btn-outline-primary">Add Currency</button>
+                            </div>
+                            <ul id="currencies-list" class="list-group">
+                                <!-- Loaded via JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CATEGORIES TAB -->
+    <div id="tab-categories" class="tab-content d-none">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h2 class="h5 mb-0">Categories List</h2>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="p-3 border-bottom">
+                            <button id="btn-new-category" class="btn btn-primary w-100">
+                                <i class="fas fa-plus me-2"></i>Add New Category
+                            </button>
+                        </div>
+                        <div id="category-list" class="list-group list-group-flush overflow-auto" style="max-height: 600px;">
+                            <!-- Categories will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h2 class="h5 mb-0" id="category-editor-title">Manage Category</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Category Name</label>
+                            <input id="cat_name" type="text" placeholder="e.g., Electronics" class="form-control">
+                        </div>
+                        <div class="d-flex gap-2 pt-3 border-top">
+                            <button id="save-category" class="btn btn-primary px-4">Save Category</button>
+                            <button id="delete-category" class="btn btn-outline-danger ms-auto">Delete Category</button>
                         </div>
                     </div>
                 </div>
@@ -219,4 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="{{ url_for('static', filename='js/admin_crud.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/admin_orders.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/admin_promo.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin_categories.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin_settings.js') }}" defer></script>
 {% endblock %}

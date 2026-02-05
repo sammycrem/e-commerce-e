@@ -1,4 +1,12 @@
 // index.js - loads product list and injects into #product-grid
+function getIconUrl(url) {
+  if (!url || !url.includes('/static/')) return url;
+  const dotIdx = url.lastIndexOf('.');
+  const base = dotIdx !== -1 ? url.substring(0, dotIdx) : url;
+  if (base.endsWith('_icon')) return url;
+  return base + '_icon.webp';
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   const grid = document.getElementById('product-grid');
   try {
@@ -10,7 +18,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     products.forEach(p => {
       const card = document.createElement('div');
       card.className = 'product-card animate__animated animate__fadeInUp';
-      const imageUrl = (p.images && p.images.length) ? p.images[0].url : 'https://via.placeholder.com/600x800?text=No+Image';
+      const imageUrl = (p.images && p.images.length) ? getIconUrl(p.images[0].url) : 'https://via.placeholder.com/600x800?text=No+Image';
 
       card.innerHTML = `
         <div class="product-image-container">
@@ -37,7 +45,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             <span class="text-muted small">(4.5)</span>
           </div>
           <div class="d-flex justify-content-between align-items-center">
-            <span class="h4 fw-bold text-primary mb-0">€${(p.base_price_cents/100).toFixed(2)}</span>
+            <span class="h4 fw-bold text-primary mb-0">${window.appConfig.currencySymbol}${(p.base_price_cents/100).toFixed(2)}</span>
             <a href="/product/${p.product_sku}" class="btn btn-primary btn-sm rounded-circle" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
               <i class="bi bi-plus-lg"></i>
             </a>

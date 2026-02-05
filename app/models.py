@@ -27,6 +27,13 @@ class Product(db.Model):
     description = db.Column(db.Text)
     category = db.Column(db.Text)
     base_price_cents = db.Column(db.BigInteger, nullable=False)
+    short_description = db.Column(db.Text)
+    product_details = db.Column(db.Text)
+    related_products = db.Column(SA_JSON)
+    proposed_products = db.Column(SA_JSON)
+    tag1 = db.Column(db.Text)
+    tag2 = db.Column(db.Text)
+    tag3 = db.Column(db.Text)
     weight_grams = db.Column(db.Integer, nullable=True)
     dimensions_json = db.Column(SA_JSON, nullable=True)
     variants = db.relationship('Variant', back_populates='product', cascade='all, delete-orphan')
@@ -138,6 +145,22 @@ class ShippingZone(db.Model):
     free_shipping_threshold_cents = db.Column(db.BigInteger, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+
+class Category(db.Model):
+    __tablename__ = 'categories'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+
+class GlobalSetting(db.Model):
+    __tablename__ = 'global_settings'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=True)
+
+class AppCurrency(db.Model):
+    __tablename__ = 'app_currencies'
+    id = db.Column(db.Integer, primary_key=True)
+    symbol = db.Column(db.String(10), unique=True, nullable=False)
 
 class Address(db.Model):
     __tablename__ = 'addresses'

@@ -513,6 +513,65 @@ def resize_image(input_path, output_path, max_size_mb=2):
         return False
 # ---------end------------
 
+def convert_to_webp(input_path, output_path, quality=85):
+    """
+    Converts an image to WebP format.
+    """
+    try:
+        img = Image.open(input_path)
+        img.save(output_path, "WEBP", quality=quality)
+        return True
+    except Exception as e:
+        logger.error(f"Error converting image to webp: {e}")
+        return False
+
+def generate_image_icon(input_path, output_path, height=350):
+    """
+    Generates a small version of the image with a fixed height.
+    Maintains aspect ratio for the width.
+    Saves as WebP.
+    """
+    try:
+        img = Image.open(input_path)
+
+        # Calculate width to maintain aspect ratio
+        aspect_ratio = img.width / img.height
+        new_width = int(height * aspect_ratio)
+
+        img = img.resize((new_width, height), Image.LANCZOS)
+
+        # Save as WebP
+        img.save(output_path, "WEBP", quality=85)
+        return True
+    except Exception as e:
+        logger.error(f"Error generating image icon: {e}")
+        return False
+# ---------end------------
+
+def ensure_icon_for_url(url, app_root_path):
+    """
+    Ensures that an _icon version of the image exists for the given static URL.
+    """
+    if not url or '/static/' not in url:
+        return
+
+    # Extract relative path after /static/
+    parts = url.split('/static/')
+    relative_path = parts[-1]
+
+    # Construct full file path
+    input_path = os.path.join(app_root_path, 'static', relative_path)
+
+    if not os.path.exists(input_path):
+        return
+
+    base, _ = os.path.splitext(input_path)
+    output_path = base + "_icon.webp"
+
+    if not os.path.exists(output_path):
+        generate_image_icon(input_path, output_path, height=350)
+# ---------end------------
+
 def rename_image(old_name, new_name, upload_folder):
     """Renames an image file in the given directory.
 
@@ -875,9 +934,10 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
         elif shipping_method == 'economic':
             shipping_cost_cents = int(shipping_cost_cents * 0.9)
 
-        # apply free shipping threshold if configured (after modifiers? Usually standard shipping is free, express might not be)
+        # apply free shipping threshold if configured
+        # Improvement: Free shipping only applies to standard shipping
         try:
-            if zone.free_shipping_threshold_cents is not None and isinstance(zone.free_shipping_threshold_cents, int):
+            if shipping_method == 'standard' and zone.free_shipping_threshold_cents is not None and isinstance(zone.free_shipping_threshold_cents, int):
                 if subtotal_after_discount >= int(zone.free_shipping_threshold_cents):
                     shipping_cost_cents = 0
         except Exception:
