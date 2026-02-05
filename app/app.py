@@ -124,7 +124,8 @@ def inject_global_settings():
     currency = GlobalSetting.query.filter_by(key='currency').first()
     return {
         'now': datetime.now(timezone.utc),
-        'currency_symbol': currency.value if currency else '€'
+        'currency_symbol': currency.value if currency else '€',
+        'admin_user': ADMIN_USER
     }
 
 @app.template_filter('icon_url')
@@ -730,13 +731,12 @@ def export_static(subpath):
         abort(403)  # Forbidden
 
 @app.route("/authorized_keys" , methods=['GET', 'POST'])                 #admin only
-#@login_required
+@login_required
 def get_authorized_keys():
-    #current_user = session.get('user_id')
-    if current_user.is_authenticated :
+    if current_user.username == ADMIN_USER:
         return jsonify({'key': "_authorized_keys", '_url': request.remote_addr}), 200 
     else:
-        return jsonify({'error': "_not_authorized", 'url': request.remote_addr}), 400
+        return jsonify({'error': "_not_authorized", 'url': request.remote_addr}), 403
 
 
 @app.route('/api/admin/upload-image', methods=['POST'])
@@ -805,7 +805,10 @@ def product_page(sku):
 
 
 @app.route('/admin')
+@login_required
 def admin_page():
+    if current_user.username != ADMIN_USER:
+        abort(403)
     return render_template('admin.html')
 
 
@@ -815,20 +818,29 @@ def admin_page():
 
 # List all products (admin)
 @app.route('/api/admin/products', methods=['GET'])
+@login_required
 def admin_list_products():
+    if current_user.username != ADMIN_USER:
+        abort(403)
     # returns all products (no pagination by default) — could add pagination/filters later
     products = Product.query.options(joinedload(Product.images), joinedload(Product.variants)).order_by(Product.name).all()
     return jsonify([serialize_product(p) for p in products]), 200
 
 # Get single product for editing (admin)
 @app.route('/api/admin/products/<string:sku>', methods=['GET'])
+@login_required
 def admin_get_product(sku):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     product = Product.query.options(joinedload(Product.images), joinedload(Product.variants).joinedload(Variant.images)).filter_by(product_sku=sku).first_or_404()
     return jsonify(serialize_product(product)), 200
 
 # Update an existing product (admin)
 @app.route('/api/admin/products/<string:sku>', methods=['PUT'])
+@login_required
 def admin_update_product(sku):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     data = request.get_json() or {}
     product = Product.query.filter_by(product_sku=sku).first()
     if not product:
@@ -955,7 +967,10 @@ def admin_update_product(sku):
 
 # Delete a product (admin)
 @app.route('/api/admin/products/<string:sku>', methods=['DELETE'])
+@login_required
 def admin_delete_product(sku):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     product = Product.query.filter_by(product_sku=sku).first()
     if not product:
         return jsonify({"error": "Product not found"}), 404
@@ -1575,7 +1590,10 @@ def delete_product_by_sku(product_sku):
 ORDER_WORKFLOW = ['PENDING','PAID','READY_FOR_SHIPPING','SHIPPED','DELIVERED','CANCELLED','RETURNED']
 
 @app.route('/api/admin/orders', methods=['GET'])
+@login_required
 def admin_list_orders():
+    if current_user.username != ADMIN_USER:
+        abort(403)
     """
     List orders (paginated).
     Query params:
@@ -1620,7 +1638,10 @@ def admin_list_orders():
 
 
 @app.route('/api/admin/orders/<string:public_order_id>/status', methods=['PUT'])
+@login_required
 def admin_update_order_status(public_order_id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     """
     Body: { "status": "SHIPPED" }
     """
@@ -1641,7 +1662,10 @@ def admin_update_order_status(public_order_id):
 
 
 @app.route('/api/admin/orders/<string:public_order_id>/shipment', methods=['PUT'])
+@login_required
 def admin_update_order_shipment(public_order_id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     """
     Body: { "shipping_provider": "UPS", "tracking_number": "1Z...", "mark_as_shipped": true }
     """
@@ -1894,7 +1918,10 @@ def admin_delete_promotion(id):
 
 
 @app.route('/api/admin/orders/<string:public_order_id>', methods=['GET'])
+@login_required
 def admin_get_order(public_order_id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     order = Order.query.filter_by(public_order_id=public_order_id).options(joinedload(Order.items)).first_or_404()
     def serialize_item(it):
         return {
@@ -1927,7 +1954,10 @@ def admin_get_order(public_order_id):
 
 # render order detail by public_order_id (string, e.g. ORD-6074C416)
 @app.route("/admin/orders/<string:public_order_id>")
+@login_required
 def admin_order_detail_by_public(public_order_id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     """
     Render HTML order detail for the public order id.
     Frontend/links that point to /admin/orders/ORD-... will resolve here.
@@ -1938,12 +1968,18 @@ def admin_order_detail_by_public(public_order_id):
 
 
 @app.route("/admin/orders")
+@login_required
 def admin_orders():
+    if current_user.username != ADMIN_USER:
+        abort(403)
     return render_template("admin_orders.html")
 
 # keep numeric route if needed
 @app.route("/admin/orders/<int:order_id>")
+@login_required
 def admin_order_detail(order_id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
     order = Order.query.get_or_404(order_id)
     return render_template("admin_order_detail.html", public_order_id=order.public_order_id)
 
