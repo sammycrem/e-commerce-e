@@ -82,6 +82,8 @@ class Order(db.Model):
     total_cents = db.Column(db.BigInteger, nullable=False, default=0)
     shipping_method = db.Column(db.String(50), nullable=True)
     payment_method = db.Column(db.String(50), nullable=True)
+    payment_provider = db.Column(db.String(50), nullable=True)
+    payment_transaction_id = db.Column(db.Text, nullable=True)
     comment = db.Column(db.Text, nullable=True)
     shipping_provider = db.Column(db.Text, nullable=True)
     tracking_number = db.Column(db.Text, nullable=True)
