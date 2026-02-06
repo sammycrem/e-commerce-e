@@ -178,6 +178,6 @@ def setup_database_cli(app_instance=None):
 setup_database = setup_database_cli
 
 if __name__ == "__main__":
-    # If run directly, maybe run setup
-    # setup_database_cli()
+    # If run directly, run setup to ensure DB tables exist
+    setup_database_cli()
     app.run(host="0.0.0.0", port=5000)
