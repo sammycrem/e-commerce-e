@@ -78,7 +78,14 @@
       if (statusFilter) params.set('status', statusFilter);
       if (qFilter) params.set('q', qFilter);
 
-      const res = await fetch('/api/admin/orders?' + params.toString(), { credentials: 'same-origin' });
+      const headers = { 'Content-Type': 'application/json' };
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
+      const res = await fetch('/api/admin/orders?' + params.toString(), {
+          credentials: 'same-origin',
+          headers: headers
+      });
       if (!res.ok) throw new Error('Failed to load orders');
       const data = await res.json();
 
@@ -138,7 +145,14 @@
 
     detailEl.innerHTML = '<p>Loading order…</p>';
     try {
-      const res = await fetch(`/api/admin/orders/${encodeURIComponent(publicOrderId)}`, { credentials: 'same-origin' });
+      const headers = { 'Content-Type': 'application/json' };
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(publicOrderId)}`, {
+          credentials: 'same-origin',
+          headers: headers
+      });
       if (!res.ok) {
         if (res.status === 404) detailEl.innerHTML = '<p>Order not found.</p>';
         else throw new Error('Failed to load order');
@@ -385,10 +399,14 @@
   // -------------------------------
   async function updateOrderStatus(publicOrderId, newStatus) {
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
       const res = await fetch(`/api/admin/orders/${encodeURIComponent(publicOrderId)}/status`, {
         method: 'PUT',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ status: newStatus })
       });
       const data = await res.json();
@@ -406,10 +424,14 @@
 
   async function sendAdminMessage(publicOrderId, content) {
     try {
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
         const res = await fetch(`/api/admin/orders/${encodeURIComponent(publicOrderId)}/message`, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({ content })
         });
         const data = await res.json();
@@ -425,10 +447,14 @@
 
   async function updateOrderShipment(publicOrderId, payload) {
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
       const res = await fetch(`/api/admin/orders/${encodeURIComponent(publicOrderId)}/shipment`, {
         method: 'PUT',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify(payload)
       });
       const data = await res.json();

@@ -93,8 +93,13 @@
             confirmImportBtn.textContent = 'Importing...';
 
             try {
+                const headers = {};
+                const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
                 const res = await fetch('/api/admin/products/import', {
                     method: 'POST',
+                    headers: headers,
                     body: formData
                 });
                 const data = await res.json();
@@ -140,8 +145,13 @@
 
         try {
           showFeedback('Uploading...');
+          const headers = {};
+          const csrfToken = document.querySelector('meta[name="csrf-token"]');
+          if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
           const res = await fetch('/api/admin/upload-image', {
             method: 'POST',
+            headers: headers,
             body: formData
           });
           const data = await res.json();
@@ -443,7 +453,11 @@
       const url = editSku ? `/api/products/${encodeURIComponent(editSku)}` : '/api/products';
 
       try {
-        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
+        const res = await fetch(url, { method, headers: headers, body: JSON.stringify(payload) });
         const data = await res.json();
         if (res.ok) {
           showFeedback(`Product ${data.name} saved.`, 'success');
@@ -462,7 +476,12 @@
       const sku = saveBtn.dataset.editSku;
       if (!sku) return showFeedback('No product selected', 'error');
       if (!confirm('Delete this product?')) return;
-      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`, { method: 'DELETE' });
+
+      const headers = {};
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
+      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`, { method: 'DELETE', headers: headers });
       if (res.ok) {
         showFeedback('Deleted', 'success');
         loadProducts();

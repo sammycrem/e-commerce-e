@@ -169,6 +169,7 @@
                     </div>
 
                     <form id="place-order-form" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="form-check mb-3 small">
                             <input class="form-check-input" type="checkbox" id="terms" required>
                             <label class="form-check-label" for="terms">

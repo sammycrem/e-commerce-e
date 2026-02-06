@@ -9,7 +9,7 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False, index=True) # Indexed
     user_id = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
     encrypted_password = db.Column(db.String(128), nullable=False)
@@ -26,7 +26,7 @@ class Product(db.Model):
     product_sku = db.Column(db.Text, nullable=False, unique=True)
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-    category = db.Column(db.Text)
+    category = db.Column(db.Text, index=True) # Indexed
     base_price_cents = db.Column(db.BigInteger, nullable=False)
     short_description = db.Column(db.Text)
     product_details = db.Column(db.Text)
@@ -75,7 +75,7 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     public_order_id = db.Column(db.Text, nullable=False, unique=True, default=lambda: f"ORD-{str(uuid.uuid4())[:8].upper()}")
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    status = db.Column(db.String(30), nullable=False, default='PENDING')
+    status = db.Column(db.String(30), nullable=False, default='PENDING', index=True) # Indexed
     subtotal_cents = db.Column(db.BigInteger, nullable=False, default=0)
     discount_cents = db.Column(db.BigInteger, nullable=False, default=0)
     shipping_cost_cents = db.Column(db.BigInteger, nullable=False, default=0)

@@ -205,6 +205,7 @@
         {% endif %}
 
         <form action="{{ url_for('account.send_order_message', public_order_id=order.public_order_id) }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
                 <label for="content" class="form-label visually-hidden">Message</label>
                 <textarea class="form-control" id="content" name="content" rows="3" placeholder="Type your message here..." required></textarea>

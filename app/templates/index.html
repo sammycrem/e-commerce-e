@@ -15,7 +15,7 @@
                 <h1 class="display-2 fw-extrabold mb-4 lh-1">Elevate Your Lifestyle With Premium Goods</h1>
                 <p class="lead mb-5 opacity-90 fs-4">Experience the perfect blend of style, quality, and technology. Our curated collections are designed for those who don't compromise.</p>
                 <div class="d-flex gap-3">
-                    <a href="{{ url_for('shop_page') }}" class="btn btn-light btn-lg px-5 py-3 fw-bold text-primary shadow hover-scale">
+                    <a href="{{ url_for('main.shop_page') }}" class="btn btn-light btn-lg px-5 py-3 fw-bold text-primary shadow hover-scale">
                         Shop Collection <i class="bi bi-arrow-right ms-2"></i>
                     </a>
                     <a href="#featured-products" class="btn btn-outline-light btn-lg px-5 py-3 fw-bold hover-scale">
@@ -53,7 +53,7 @@
                 <div class="position-absolute bottom-0 start-0 w-100 p-4 text-white" style="background: linear-gradient(transparent, rgba(0,0,0,0.7));">
                     <h3 class="h4 fw-bold mb-1">Modern Fashion</h3>
                     <p class="small mb-2 opacity-75">120+ Products</p>
-                    <a href="{{ url_for('shop_page', category='fashion') }}" class="btn btn-sm btn-light fw-bold px-3">Browse</a>
+                    <a href="{{ url_for('main.shop_page', category='fashion') }}" class="btn btn-sm btn-light fw-bold px-3">Browse</a>
                 </div>
             </div>
         </div>
@@ -63,7 +63,7 @@
                 <div class="position-absolute bottom-0 start-0 w-100 p-4 text-white" style="background: linear-gradient(transparent, rgba(0,0,0,0.7));">
                     <h3 class="h4 fw-bold mb-1">Latest Gadgets</h3>
                     <p class="small mb-2 opacity-75">85+ Products</p>
-                    <a href="{{ url_for('shop_page', category='electronics') }}" class="btn btn-sm btn-light fw-bold px-3">Browse</a>
+                    <a href="{{ url_for('main.shop_page', category='electronics') }}" class="btn btn-sm btn-light fw-bold px-3">Browse</a>
                 </div>
             </div>
         </div>
@@ -73,7 +73,7 @@
                 <div class="position-absolute bottom-0 start-0 w-100 p-4 text-white" style="background: linear-gradient(transparent, rgba(0,0,0,0.7));">
                     <h3 class="h4 fw-bold mb-1">Premium Accessories</h3>
                     <p class="small mb-2 opacity-75">45+ Products</p>
-                    <a href="{{ url_for('shop_page', category='accessories') }}" class="btn btn-sm btn-light fw-bold px-3">Browse</a>
+                    <a href="{{ url_for('main.shop_page', category='accessories') }}" class="btn btn-sm btn-light fw-bold px-3">Browse</a>
                 </div>
             </div>
         </div>
@@ -86,7 +86,7 @@
                 <h2 class="fw-bold mb-1 h1">Featured Products</h2>
                 <p class="text-muted mb-0">Our top picks for this week</p>
             </div>
-            <a href="{{ url_for('shop_page') }}" class="btn btn-link text-primary fw-bold text-decoration-none p-0">
+            <a href="{{ url_for('main.shop_page') }}" class="btn btn-link text-primary fw-bold text-decoration-none p-0">
                 View All <i class="bi bi-chevron-right ms-1"></i>
             </a>
         </div>

@@ -12,7 +12,7 @@
                     <h3 class="fw-bold mt-3">{{ current_user.username }}</h3>
                     <p class="text-muted">{{ current_user.email }}</p>
                     <div class="d-grid gap-2 mt-4">
-                        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                        <a href="{{ url_for('main.logout') }}" class="btn btn-outline-danger">
                             <i class="bi bi-box-arrow-right me-2"></i>Logout
                         </a>
                     </div>
@@ -88,6 +88,7 @@
                                             <li><hr class="dropdown-divider"></li>
                                             <li>
                                                 <form method="POST" action="{{ url_for('checkout_bp.shipping_address') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <input type="hidden" name="address_id" value="{{ address.id }}">
                                                     <button type="submit" name="delete_address" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
                                                 </form>
@@ -136,7 +137,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-                <form action="{{ url_for('update_profile') }}" method="POST">
+                <form action="{{ url_for('main.update_profile') }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="email" class="form-label small fw-bold text-muted text-uppercase">Email Address</label>
                         <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
@@ -164,6 +166,7 @@
             </div>
             <div class="modal-body p-4">
                 <form method="POST" action="{{ url_for('checkout_bp.shipping_address') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="address_type" class="form-label small fw-bold text-muted text-uppercase">Address Type</label>
                         <select class="form-select" id="address_type" name="address_type" required>

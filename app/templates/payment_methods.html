@@ -36,6 +36,7 @@
         <div class="col-lg-8">
             <div class="bg-white rounded shadow-sm p-4 mb-4">
                 <form id="payment-methods-form" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="card mb-3 border payment-card">
                         <div class="card-body d-flex align-items-center">
                             <div class="form-check flex-grow-1">

@@ -12,6 +12,7 @@
                 </div>
                 <div class="card-body p-4">
                     <form method="POST" action="{{ url_for('checkout_bp.edit_address', address_id=address.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="address_type" class="form-label small fw-bold">Address Type</label>
                             <select class="form-select" id="address_type" name="address_type" required>
