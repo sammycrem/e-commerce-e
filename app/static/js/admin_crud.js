@@ -351,6 +351,7 @@
       // support both { products: [...] } and direct array
       const list = Array.isArray(data) ? data : (data.products || []);
       list.forEach(p => {
+        if (p.is_active === false) return; // Hide soft-deleted products
         const item = el('div', { class: 'product-list-item', style: 'padding:6px; border-bottom:1px solid #eee; cursor:pointer;' }, `${p.name} (${p.product_sku})`);
         item.addEventListener('click', () => loadProduct(p.product_sku)); // use SKU!
         productList.appendChild(item);
