@@ -50,10 +50,9 @@ ADMIN_USER = config_dict.get('APP_ADMIN_USER')
 ADMIN_EMAIL = config_dict.get('APP_ADMIN_EMAIL')
 ADMIN_PASSWORD = config_dict.get('APP_ADMIN_PASSWORD')
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__, static_folder='static', template_folder='templates')
 
-    # Apply config
     # Map text file config keys to app config
     app.config['SECRET_KEY'] = config_dict['APP_SECRET_KEY']
     app.config['SQLALCHEMY_DATABASE_URI'] = config_dict['APP_SQLALCHEMY_DATABASE_URI']
@@ -68,6 +67,11 @@ def create_app():
 
     # Security & Performance Config
     app.config['WTF_CSRF_ENABLED'] = True # Explicitly enable
+
+    # Apply test config (overrides defaults)
+    if test_config:
+        app.config.update(test_config)
+
     # SQLAlchemy Pooling
     # Only apply pooling options for non-SQLite databases to avoid TypeError
     if 'sqlite' not in app.config['SQLALCHEMY_DATABASE_URI']:
@@ -116,10 +120,18 @@ def create_app():
     # Context Processors
     @app.context_processor
     def inject_global_settings():
-        currency = GlobalSetting.query.filter_by(key='currency').first()
+        currency_symbol = '€'
+        try:
+            currency = GlobalSetting.query.filter_by(key='currency').first()
+            if currency:
+                currency_symbol = currency.value
+        except Exception:
+            # Handle case where tables are not created yet (OperationalError)
+            pass
+
         return {
             'now': datetime.now(timezone.utc),
-            'currency_symbol': currency.value if currency else '€',
+            'currency_symbol': currency_symbol,
             'admin_user': app.config.get('APP_ADMIN_USER')
         }
 

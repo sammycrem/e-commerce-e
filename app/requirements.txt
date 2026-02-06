@@ -11,3 +11,7 @@ python-dotenv
 cryptography
 werkzeug
 Pillow
+Flask-WTF
+Flask-Limiter
+Flask-Caching
+pymemcache
