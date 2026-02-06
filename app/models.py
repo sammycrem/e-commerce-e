@@ -37,6 +37,7 @@ class Product(db.Model):
     tag3 = db.Column(db.Text)
     weight_grams = db.Column(db.Integer, nullable=True)
     dimensions_json = db.Column(SA_JSON, nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     variants = db.relationship('Variant', back_populates='product', cascade='all, delete-orphan')
     images = db.relationship('ProductImage', back_populates='product', cascade='all, delete-orphan', order_by='ProductImage.display_order')
 

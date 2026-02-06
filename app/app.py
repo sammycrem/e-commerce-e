@@ -68,10 +68,6 @@ def create_app(test_config=None):
     # Security & Performance Config
     app.config['WTF_CSRF_ENABLED'] = True # Explicitly enable
 
-    # Apply test config (overrides defaults)
-    if test_config:
-        app.config.update(test_config)
-
     # SQLAlchemy Pooling
     # Only apply pooling options for non-SQLite databases to avoid TypeError
     if 'sqlite' not in app.config['SQLALCHEMY_DATABASE_URI']:
@@ -81,13 +77,18 @@ def create_app(test_config=None):
             'pool_pre_ping': True
         }
 
-    # Caching Config
+    # Caching Config (Defaults)
     app.config['CACHE_TYPE'] = 'SimpleCache'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 300
 
     # Rate Limiting
     app.config['RATELIMIT_DEFAULT'] = "200 per day"
     app.config['RATELIMIT_STORAGE_URI'] = "memory://"
+
+    # Apply test config (overrides defaults)
+    # MOVED this to the end of config block to ensure it overrides defaults
+    if test_config:
+        app.config.update(test_config)
 
     # Extensions Init
     db.init_app(app)

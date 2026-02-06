@@ -1107,6 +1107,7 @@ def serialize_product(product):
         "tag3": product.tag3,
         "weight_grams": product.weight_grams,
         "dimensions_json": product.dimensions_json or {"length": 0, "width": 0, "height": 0},
+        "is_active": product.is_active,
         "images": [serialize_image(img) for img in product.images],
         "variants": [serialize_variant(var) for var in product.variants]
     }

@@ -4,7 +4,7 @@
 
 from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
-from ..models import Product, Variant, ProductImage, VariantImage, Order, Category, GlobalSetting, AppCurrency, Promotion, User, Message
+from ..models import Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category, GlobalSetting, AppCurrency, Message, Address, User
 from ..extensions import db, cache, limiter
 from sqlalchemy.orm import joinedload
 from sqlalchemy import desc
@@ -15,7 +15,10 @@ import uuid
 import json
 import csv
 import io
+import traceback
 from werkzeug.utils import secure_filename
+from datetime import datetime, timezone
+from decimal import Decimal
 from flask import current_app
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -27,18 +30,22 @@ def allowed_file(filename):
 
 def check_admin():
     admin_user = current_app.config.get('APP_ADMIN_USER')
-    if current_user.username != admin_user:
+    if not current_user.is_authenticated or current_user.username != admin_user:
         abort(403)
 
 # Public Product APIs
 @api_bp.route('/products', methods=['GET'])
 @cache.cached(timeout=60, query_string=True)
 def list_products():
+    print("DEBUG: list_products executing query...")
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     category = request.args.get('category', type=str)
 
     query = Product.query.options(joinedload(Product.images), joinedload(Product.variants))
+    # Public API: only active products
+    query = query.filter_by(is_active=True)
+
     if category:
         query = query.filter_by(category=category)
 
@@ -128,6 +135,10 @@ def admin_update_product(sku):
         product.weight_grams = data.get('weight_grams', product.weight_grams)
         product.dimensions_json = data.get('dimensions_json', product.dimensions_json)
 
+        # Allow activating/deactivating
+        if 'is_active' in data:
+            product.is_active = bool(data.get('is_active'))
+
         if 'images' in data:
             ProductImage.query.filter_by(product_id=product.id).delete(synchronize_session=False)
             for idx, img in enumerate(data.get('images', [])):
@@ -192,8 +203,17 @@ def admin_update_product(sku):
                 Variant.query.filter(Variant.sku.in_(skus_to_delete), Variant.product_id == product.id).delete(synchronize_session=False)
 
         db.session.commit()
-        cache.delete_memoized(list_products)
-        cache.delete_memoized(get_product, sku)
+
+        try:
+            cache.delete_memoized(list_products)
+        except Exception:
+            traceback.print_exc()
+
+        try:
+            cache.delete_memoized(get_product, sku)
+        except Exception:
+            # Often fails with blueprints due to naming
+            traceback.print_exc()
 
         full_product = Product.query.options(
             joinedload(Product.images),
@@ -203,6 +223,7 @@ def admin_update_product(sku):
 
     except Exception as e:
         db.session.rollback()
+        traceback.print_exc()
         return jsonify({"error": "Failed to update product", "details": str(e)}), 500
 
 @api_bp.route('/admin/products/<string:sku>', methods=['DELETE'])
@@ -213,10 +234,15 @@ def admin_delete_product(sku):
     if not product:
         return jsonify({"error": "Product not found"}), 404
     try:
-        db.session.delete(product)
+        # Soft delete
+        product.is_active = False
+        db.session.add(product)
         db.session.commit()
-        cache.delete_memoized(list_products)
-        return jsonify({"message": f"Product {sku} deleted"}), 200
+        try:
+            cache.delete_memoized(list_products)
+        except Exception:
+            traceback.print_exc()
+        return jsonify({"message": f"Product {sku} deactivated (soft delete)"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Failed to delete product", "details": str(e)}), 500
@@ -489,15 +515,16 @@ def admin_import_products():
                     _create_product_internal(p_data)
         db.session.commit()
         # Invalidate cache
-        cache.delete_memoized(list_products)
+        try:
+            cache.delete_memoized(list_products)
+        except Exception:
+            pass
         return jsonify({"message": "Import successful"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Import failed: {str(e)}"}), 500
 
 # Additional Admin APIs (Settings, Currencies, Users, Promotions)
-# I will implement placeholders or quick ports if needed, but the main ones are done.
-# Admin Settings
 @api_bp.route('/admin/settings', methods=['GET'])
 @login_required
 def admin_get_settings():
