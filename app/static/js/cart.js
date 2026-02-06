@@ -24,6 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${symbol}${(cents / 100).toFixed(2)}`;
   }
 
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  }
+
   function getIconUrl(url) {
     if (!url || !url.includes('/static/')) return url;
     const dotIdx = url.lastIndexOf('.');
@@ -141,7 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/cart', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify({ sku, quantity: Math.max(0, quantity) })
       });
       if (!res.ok) {
@@ -162,7 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/calculate-totals', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify({ items, shipping_country_iso: null, promo_code: null })
       });
       const data = await res.json();

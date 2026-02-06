@@ -11,6 +11,11 @@
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const formatPrice = cents => `${window.appConfig.currencySymbol}${(cents/100).toFixed(2)}`;
 
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  }
+
   function getIconUrl(url) {
     if (!url || !url.includes('/static/')) return url;
     const dotIdx = url.lastIndexOf('.');
@@ -143,7 +148,10 @@
       const res = await fetch('/api/cart', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify({ sku, quantity: Math.max(0, quantity) })
       });
       if (res.ok) {
@@ -347,7 +355,10 @@
     try {
       const res = await fetch('/api/cart', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify(payload),
         credentials: 'same-origin'
       });

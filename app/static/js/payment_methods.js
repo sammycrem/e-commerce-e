@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${symbol}${(cents / 100).toFixed(2)}`;
     }
 
+    function getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.content : '';
+    }
+
     async function refreshSummary(promoCode = '') {
         try {
             // Get cart items first
@@ -29,7 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const res = await fetch('/api/calculate-totals', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: JSON.stringify({
                     items: items,
                     shipping_country_iso: countryIso,
@@ -95,7 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const res = await fetch('/api/apply-promo', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
                     body: JSON.stringify({
                         code: code,
                         cart_subtotal_cents: subtotal

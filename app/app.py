@@ -149,7 +149,7 @@ def create_app(test_config=None):
         # Basic CSP - allows self, unsafe-inline (often needed for legacy JS), and data: images
         # In production, 'unsafe-inline' should be removed and nonces used.
         # Given the "vanilla JS" nature, unsafe-inline might be required for now.
-        csp = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'"
+        csp = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net"
         response.headers['Content-Security-Policy'] = csp
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
