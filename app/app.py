@@ -1617,6 +1617,8 @@ def admin_list_orders():
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
     def serialize_order_summary(o):
+        # Count unread messages from USER
+        unread_count = Message.query.filter_by(order_id=o.id, sender_type='USER', is_read=False).count()
         return {
             "id": o.id,
             "public_order_id": o.public_order_id,
@@ -1626,7 +1628,8 @@ def admin_list_orders():
             "shipping_provider": o.shipping_provider,
             "tracking_number": o.tracking_number,
             "shipped_at": o.shipped_at.isoformat() if o.shipped_at else None,
-            "item_count": sum(i.quantity for i in o.items)
+            "item_count": sum(i.quantity for i in o.items),
+            "unread_messages_count": unread_count
         }
 
     return jsonify({
@@ -1922,7 +1925,15 @@ def admin_delete_promotion(id):
 def admin_get_order(public_order_id):
     if current_user.username != ADMIN_USER:
         abort(403)
-    order = Order.query.filter_by(public_order_id=public_order_id).options(joinedload(Order.items)).first_or_404()
+    order = Order.query.filter_by(public_order_id=public_order_id).options(joinedload(Order.items), joinedload(Order.messages)).first_or_404()
+
+    # Mark user messages as read
+    unread_messages = Message.query.filter_by(order_id=order.id, sender_type='USER', is_read=False).all()
+    if unread_messages:
+        for m in unread_messages:
+            m.is_read = True
+        db.session.commit()
+
     def serialize_item(it):
         return {
             "variant_sku": it.variant_sku,
@@ -1930,6 +1941,16 @@ def admin_get_order(public_order_id):
             "unit_price_cents": it.unit_price_cents,
             "product_snapshot": it.product_snapshot
         }
+
+    def serialize_message(m):
+        return {
+            "id": m.id,
+            "sender_type": m.sender_type,
+            "content": m.content,
+            "created_at": m.created_at.isoformat(),
+            "is_read": m.is_read
+        }
+
     return jsonify({
         "public_order_id": order.public_order_id,
         "status": order.status,
@@ -1948,8 +1969,44 @@ def admin_get_order(public_order_id):
         "tracking_number": order.tracking_number,
         "shipped_at": order.shipped_at.isoformat() if order.shipped_at else None,
         "created_at": order.created_at.isoformat(),
-        "items": [serialize_item(i) for i in order.items]
+        "items": [serialize_item(i) for i in order.items],
+        "messages": [serialize_message(m) for m in order.messages]
     }), 200
+
+@app.route('/api/admin/orders/<string:public_order_id>/message', methods=['POST'])
+@login_required
+def admin_send_message(public_order_id):
+    if current_user.username != ADMIN_USER:
+        abort(403)
+
+    order = Order.query.filter_by(public_order_id=public_order_id).first_or_404()
+    data = request.get_json() or {}
+    content = data.get('content')
+
+    if not content:
+        return jsonify({"error": "Message content is required"}), 400
+
+    msg = Message(
+        user_id=order.user_id,
+        order_id=order.id,
+        sender_type='ADMIN',
+        content=content,
+        created_at=datetime.now(timezone.utc),
+        is_read=False
+    )
+    db.session.add(msg)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Message sent",
+        "data": {
+            "id": msg.id,
+            "sender_type": msg.sender_type,
+            "content": msg.content,
+            "created_at": msg.created_at.isoformat(),
+            "is_read": msg.is_read
+        }
+    }), 201
 
 
 # render order detail by public_order_id (string, e.g. ORD-6074C416)

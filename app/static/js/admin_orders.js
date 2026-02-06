@@ -93,10 +93,16 @@
         const row = el('div', { class: 'order-row' });
         Object.assign(row.style, { display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer' });
 
-        const left = el('div', { class: 'order-left' },
-          el('div', { class: 'order-id' }, o.public_order_id),
-          el('div', { class: 'order-meta' }, `${new Date(o.created_at).toLocaleString()} • items: ${o.item_count}`)
-        );
+        const left = el('div', { class: 'order-left' });
+        const idRow = el('div', { class: 'order-id', style: 'display:flex; align-items:center;' }, o.public_order_id);
+
+        if (o.unread_messages_count > 0) {
+            const badge = el('span', { class: 'badge bg-danger ms-2', style: 'margin-left:8px; font-size:0.7em;' }, `${o.unread_messages_count} new msg`);
+            idRow.appendChild(badge);
+        }
+
+        left.appendChild(idRow);
+        left.appendChild(el('div', { class: 'order-meta' }, `${new Date(o.created_at).toLocaleString()} • items: ${o.item_count}`));
 
         const right = el('div', { class: 'order-right' },
           el('div', { class: 'order-total' }, formatPrice(o.total_cents)),
@@ -312,6 +318,66 @@
     // small details (provider/tracking)
     container.appendChild(el('p', {}, `Current shipment: ${o.shipping_provider || '—'} ${o.tracking_number ? ' • ' + o.tracking_number : ''}`));
     if (o.shipped_at) container.appendChild(el('p', {}, `Shipped at: ${new Date(o.shipped_at).toLocaleString()}`));
+
+    // Messages Section
+    const msgWrap = el('div', { class: 'order-messages', style: 'margin-top:24px; border-top:1px solid #eee; padding-top:16px;' });
+    msgWrap.appendChild(el('h3', {}, 'Messages'));
+
+    const msgList = el('div', { style: 'max-height:300px; overflow-y:auto; margin-bottom:12px; border:1px solid #eee; padding:10px; border-radius:4px;' });
+    const messages = (o.messages || []).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+
+    if (messages.length === 0) {
+        msgList.appendChild(el('div', { class: 'text-muted text-center' }, 'No messages yet.'));
+    } else {
+        messages.forEach(m => {
+            const isUser = m.sender_type === 'USER';
+            const bubble = el('div', { class: `message-bubble ${isUser ? 'bg-light border' : 'bg-primary text-white'}` });
+            Object.assign(bubble.style, {
+                maxWidth: '80%',
+                padding: '8px 12px',
+                borderRadius: '12px',
+                marginBottom: '8px',
+                marginLeft: isUser ? '0' : 'auto',
+                marginRight: isUser ? 'auto' : '0',
+                alignSelf: isUser ? 'flex-start' : 'flex-end'
+            });
+
+            const meta = el('div', { style: 'font-size:0.75rem; opacity:0.8; margin-bottom:4px;' },
+                `${isUser ? 'User' : 'Admin'} • ${new Date(m.created_at).toLocaleString()}`
+            );
+            const content = el('div', {}, m.content);
+
+            bubble.appendChild(meta);
+            bubble.appendChild(content);
+            msgList.appendChild(bubble);
+        });
+        // Scroll to bottom
+        setTimeout(() => msgList.scrollTop = msgList.scrollHeight, 0);
+    }
+    msgWrap.appendChild(msgList);
+
+    // Reply Form
+    const replyArea = el('textarea', { class: 'form-control', rows: 3, placeholder: 'Type a reply...' });
+    Object.assign(replyArea.style, { width: '100%', marginBottom: '8px', padding:'8px' });
+
+    const sendBtn = el('button', { class: 'btn btn-primary' }, 'Send Message');
+    sendBtn.addEventListener('click', async () => {
+        const content = replyArea.value.trim();
+        if (!content) return showToast('Message cannot be empty', 'error');
+
+        try {
+            await sendAdminMessage(o.public_order_id, content);
+            replyArea.value = '';
+            // refresh
+            await loadOrderDetail(o.public_order_id, container);
+        } catch (e) {
+            // handled in sendAdminMessage
+        }
+    });
+
+    msgWrap.appendChild(replyArea);
+    msgWrap.appendChild(sendBtn);
+    container.appendChild(msgWrap);
   }
 
   // -------------------------------
@@ -335,6 +401,25 @@
       console.error('updateOrderStatus error', err);
       showToast('Failed to update status: ' + err.message, 'error');
       throw err;
+    }
+  }
+
+  async function sendAdminMessage(publicOrderId, content) {
+    try {
+        const res = await fetch(`/api/admin/orders/${encodeURIComponent(publicOrderId)}/message`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send message');
+        showToast('Message sent', 'success');
+        return data;
+    } catch (err) {
+        console.error('sendAdminMessage error', err);
+        showToast('Failed to send message: ' + err.message, 'error');
+        throw err;
     }
   }
 
