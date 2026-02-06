@@ -150,7 +150,21 @@ def create_app(test_config=None):
         # Basic CSP - allows self, unsafe-inline (often needed for legacy JS), and data: images
         # In production, 'unsafe-inline' should be removed and nonces used.
         # Given the "vanilla JS" nature, unsafe-inline might be required for now.
-        csp = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net"
+        allowed_urls = app.config.get('ALLOWED_URLS', '')
+        allowed_list = " ".join([u.strip() for u in allowed_urls.split(';') if u.strip()])
+
+        # Ensure cdn.jsdelivr.net is there as a baseline if config is empty, but we trust config.txt
+        if not allowed_list:
+            allowed_list = "https://cdn.jsdelivr.net"
+
+        csp = (
+            f"default-src 'self'; "
+            f"script-src 'self' 'unsafe-inline' {allowed_list}; "
+            f"style-src 'self' 'unsafe-inline' {allowed_list}; "
+            f"img-src 'self' data:; "
+            f"font-src 'self' {allowed_list}; "
+            f"connect-src 'self' {allowed_list}"
+        )
         response.headers['Content-Security-Policy'] = csp
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'

@@ -345,7 +345,7 @@
 
     // Load products list
     async function loadProducts() {
-      const res = await fetch('/api/products');
+      const res = await fetch('/api/admin/products');
       const data = await res.json();
       productList.innerHTML = '';
       // support both { products: [...] } and direct array
@@ -359,7 +359,7 @@
 
     // Load single product by SKU
     async function loadProduct(sku) {
-      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`);
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(sku)}`);
       if (!res.ok) return showFeedback(`Failed to load product ${sku}`, 'error');
       const p = await res.json();
       $('#product_sku').value = p.product_sku;
@@ -450,7 +450,7 @@
 
       const editSku = saveBtn.dataset.editSku;
       const method = editSku ? 'PUT' : 'POST';
-      const url = editSku ? `/api/products/${encodeURIComponent(editSku)}` : '/api/products';
+      const url = editSku ? `/api/admin/products/${encodeURIComponent(editSku)}` : '/api/admin/products';
 
       try {
         const headers = { 'Content-Type': 'application/json' };
@@ -481,7 +481,7 @@
       const csrfToken = document.querySelector('meta[name="csrf-token"]');
       if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
 
-      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`, { method: 'DELETE', headers: headers });
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(sku)}`, { method: 'DELETE', headers: headers });
       if (res.ok) {
         showFeedback('Deleted', 'success');
         loadProducts();
