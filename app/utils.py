@@ -1091,6 +1091,15 @@ def serialize_variant(variant):
         "images": [serialize_image(img) for img in variant.images]
     }
 
+def serialize_review(review):
+    return {
+        "id": review.id,
+        "user_name": review.user.username,
+        "rating": review.rating,
+        "comment": review.comment,
+        "created_at": review.created_at.isoformat()
+    }
+
 def serialize_product(product):
     return {
         "product_sku": product.product_sku,
@@ -1109,7 +1118,8 @@ def serialize_product(product):
         "dimensions_json": product.dimensions_json or {"length": 0, "width": 0, "height": 0},
         "is_active": product.is_active,
         "images": [serialize_image(img) for img in product.images],
-        "variants": [serialize_variant(var) for var in product.variants]
+        "variants": [serialize_variant(var) for var in product.variants],
+        "reviews": [serialize_review(r) for r in product.reviews]
     }
 
 def serialize_promotion(promo):

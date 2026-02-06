@@ -4,11 +4,11 @@
 
 from flask import Blueprint, jsonify, request, abort
 from flask_login import login_required, current_user
-from ..models import Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category, GlobalSetting, AppCurrency, Message, Address, User
+from ..models import Product, Variant, ProductImage, VariantImage, Order, OrderItem, Promotion, Country, VatRate, ShippingZone, Category, GlobalSetting, AppCurrency, Message, Address, User, Review
 from ..extensions import db, cache, limiter
 from sqlalchemy.orm import joinedload
 from sqlalchemy import desc
-from ..utils import serialize_product, serialize_promotion, generate_image_icon, convert_to_webp, ensure_icon_for_url
+from ..utils import serialize_product, serialize_promotion, generate_image_icon, convert_to_webp, ensure_icon_for_url, serialize_review
 from ..product_service import products_to_csv, parse_products_file, _create_product_internal, _update_product_internal
 import os
 import uuid
@@ -62,7 +62,8 @@ def list_products():
 def get_product(sku):
     product = Product.query.options(
         joinedload(Product.images),
-        joinedload(Product.variants).joinedload(Variant.images)
+        joinedload(Product.variants).joinedload(Variant.images),
+        joinedload(Product.reviews).joinedload(Review.user)
     ).filter_by(product_sku=sku).first_or_404()
     return jsonify(serialize_product(product)), 200
 
@@ -78,6 +79,50 @@ def get_products_batch():
     product_map = {p.product_sku: serialize_product(p) for p in products}
     result = [product_map[sku] for sku in skus if sku in product_map]
     return jsonify(result), 200
+
+@api_bp.route('/products/<string:sku>/reviews', methods=['POST'])
+@login_required
+def add_product_review(sku):
+    product = Product.query.filter_by(product_sku=sku).first_or_404()
+    data = request.get_json() or {}
+
+    rating = int(data.get('rating', 0))
+    comment = data.get('comment', '').strip()
+
+    if not (1 <= rating <= 5):
+        return jsonify({"error": "Rating must be between 1 and 5"}), 400
+    if not comment:
+        return jsonify({"error": "Comment is required"}), 400
+
+    # Check if user already reviewed
+    existing = Review.query.filter_by(user_id=current_user.id, product_id=product.id).first()
+    if existing:
+        return jsonify({"error": "You have already reviewed this product"}), 409
+
+    review = Review(
+        user_id=current_user.id,
+        product_id=product.id,
+        rating=rating,
+        comment=comment,
+        created_at=datetime.now(timezone.utc)
+    )
+    db.session.add(review)
+    db.session.commit()
+
+    # Invalidate product cache
+    try:
+        cache.delete_memoized(get_product, sku)
+    except Exception:
+        # Cache invalidation can fail in tests if not properly set up
+        pass
+
+    return jsonify(serialize_review(review)), 201
+
+@api_bp.route('/products/<string:sku>/reviews', methods=['GET'])
+def get_product_reviews(sku):
+    product = Product.query.filter_by(product_sku=sku).first_or_404()
+    reviews = Review.query.options(joinedload(Review.user)).filter_by(product_id=product.id).order_by(desc(Review.created_at)).all()
+    return jsonify([serialize_review(r) for r in reviews]), 200
 
 # Public Settings
 @api_bp.route('/settings', methods=['GET'])

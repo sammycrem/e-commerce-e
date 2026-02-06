@@ -146,6 +146,22 @@
         border-left: 1px solid #dee2e6;
         border-right: 1px solid #dee2e6;
     }
+    /* Reviews Styles */
+    .star-rating {
+        color: #ffc107;
+        font-size: 1.1rem;
+    }
+    .star-rating.interactive i {
+        cursor: pointer;
+    }
+    .review-card {
+        border-bottom: 1px solid #eee;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+    .review-card:last-child {
+        border-bottom: none;
+    }
 </style>
 {% endblock %}
 
@@ -264,6 +280,51 @@
                 <h4 class="fw-bold mb-4">Product Description</h4>
                 <div id="full-description-container" class="text-muted" style="white-space: pre-line; line-height: 1.6;">
                     <!-- Full description injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div id="reviews-section" class="row mt-5 pt-4 border-top">
+            <div class="col-lg-8">
+                <h4 class="fw-bold mb-4">Customer Reviews</h4>
+
+                <!-- Review Form -->
+                {% if current_user.is_authenticated %}
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Write a Review</h5>
+                        <form id="review-form">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Rating</label>
+                                <div class="star-rating interactive" id="rating-input">
+                                    <i class="bi bi-star" data-value="1"></i>
+                                    <i class="bi bi-star" data-value="2"></i>
+                                    <i class="bi bi-star" data-value="3"></i>
+                                    <i class="bi bi-star" data-value="4"></i>
+                                    <i class="bi bi-star" data-value="5"></i>
+                                    <input type="hidden" name="rating" id="rating-value" value="0">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="review-comment" class="form-label fw-bold small">Comment</label>
+                                <textarea class="form-control" id="review-comment" rows="3" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Submit Review</button>
+                        </form>
+                        <div id="review-feedback" class="mt-2"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    Please <a href="{{ url_for('main.login', next=request.path) }}">login</a> to leave a review.
+                </div>
+                {% endif %}
+
+                <!-- Reviews List -->
+                <div id="reviews-list">
+                    <!-- Reviews injected here -->
+                    <p class="text-muted">Loading reviews...</p>
                 </div>
             </div>
         </div>

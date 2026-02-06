@@ -19,6 +19,7 @@ class User(db.Model, UserMixin):
     orders = db.relationship('Order', back_populates='user')
     addresses = db.relationship('Address', back_populates='user', cascade='all, delete-orphan')
     messages = db.relationship('Message', back_populates='user', cascade='all, delete-orphan')
+    reviews = db.relationship('Review', back_populates='user', cascade='all, delete-orphan')
 
 class Product(db.Model):
     __tablename__ = 'products'
@@ -40,6 +41,7 @@ class Product(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     variants = db.relationship('Variant', back_populates='product', cascade='all, delete-orphan')
     images = db.relationship('ProductImage', back_populates='product', cascade='all, delete-orphan', order_by='ProductImage.display_order')
+    reviews = db.relationship('Review', back_populates='product', cascade='all, delete-orphan')
 
 class Variant(db.Model):
     __tablename__ = 'variants'
@@ -196,3 +198,15 @@ class Message(db.Model):
 
     user = db.relationship('User', back_populates='messages')
     order = db.relationship('Order', back_populates='messages')
+
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='CASCADE'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+
+    user = db.relationship('User', back_populates='reviews')
+    product = db.relationship('Product', back_populates='reviews')
