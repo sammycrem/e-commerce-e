@@ -177,7 +177,13 @@ def setup_database_cli(app_instance=None):
 
 setup_database = setup_database_cli
 
+# Run setup on import to ensure DB tables exist (e.g. for Docker/Gunicorn)
+if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+    # Simple check to avoid double run in reloader, though idempotent
+    try:
+        setup_database_cli(app)
+    except Exception as e:
+        logger.warning(f"Database setup failed on import: {e}")
+
 if __name__ == "__main__":
-    # If run directly, run setup to ensure DB tables exist
-    setup_database_cli()
     app.run(host="0.0.0.0", port=5000)
