@@ -56,6 +56,12 @@ def order_detail(public_order_id):
     order = Order.query.filter_by(public_order_id=public_order_id, user_id=current_user.id).first_or_404()
     return render_template('account/order_detail.html', order=order)
 
+@account_bp.route('/orders/<string:public_order_id>/reviews', methods=['GET'])
+@login_required
+def review_order_page(public_order_id):
+    order = Order.query.filter_by(public_order_id=public_order_id, user_id=current_user.id).first_or_404()
+    return render_template('account/review_order.html', order=order)
+
 @account_bp.route('/orders/<string:public_order_id>/message', methods=['POST'])
 @login_required
 def send_order_message(public_order_id):
@@ -74,12 +80,6 @@ def send_order_message(public_order_id):
         db.session.add(msg)
         db.session.commit()
         flash('Message sent to administrator.', 'success')
-
-        # Optional: Send email notification to Admin
-        # from app.app import ADMIN_EMAIL (need to import or get from config)
-        # We can skip email for now or implement it if "send message to shop administrator" implies email.
-        # The prompt says "send message to shop administrator related to open orders".
-        # Storing in DB is "sending".
 
     else:
         flash('Message cannot be empty.', 'danger')
