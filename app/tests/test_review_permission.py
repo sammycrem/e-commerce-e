@@ -89,7 +89,7 @@ def test_product_page_visibility(buyer_client, visitor_client):
     assert b'Write a Review' in res.data
     assert b'must purchase' not in res.data
 
-    # Visitor sees warning
+    # Visitor sees NOTHING (hidden entirely)
     res = visitor_client.get('/product/P-1')
     assert b'Write a Review' not in res.data
-    assert b'must purchase' in res.data
+    assert b'must purchase' not in res.data
