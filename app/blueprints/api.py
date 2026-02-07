@@ -118,6 +118,38 @@ def add_product_review(sku):
 
     return jsonify(serialize_review(review)), 201
 
+@api_bp.route('/products/<string:sku>/reviews', methods=['PUT'])
+@login_required
+def update_product_review(sku):
+    product = Product.query.filter_by(product_sku=sku).first_or_404()
+    data = request.get_json() or {}
+
+    rating = int(data.get('rating', 0))
+    comment = data.get('comment', '').strip()
+
+    if not (1 <= rating <= 5):
+        return jsonify({"error": "Rating must be between 1 and 5"}), 400
+    if not comment:
+        return jsonify({"error": "Comment is required"}), 400
+
+    review = Review.query.filter_by(user_id=current_user.id, product_id=product.id).first()
+    if not review:
+        return jsonify({"error": "Review not found"}), 404
+
+    review.rating = rating
+    review.comment = comment
+    # Optionally update created_at or add updated_at field
+    # review.created_at = datetime.now(timezone.utc)
+
+    db.session.commit()
+
+    try:
+        cache.delete_memoized(get_product, sku)
+    except Exception:
+        pass
+
+    return jsonify(serialize_review(review)), 200
+
 @api_bp.route('/products/<string:sku>/reviews', methods=['GET'])
 def get_product_reviews(sku):
     product = Product.query.filter_by(product_sku=sku).first_or_404()

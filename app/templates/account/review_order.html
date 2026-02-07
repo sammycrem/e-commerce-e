@@ -111,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Form Submission
     document.querySelectorAll('.review-form').forEach(form => {
+        form.dataset.method = 'POST'; // Default
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const sku = form.dataset.sku;
@@ -118,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const feedback = form.querySelector('.feedback');
             const rating = form.querySelector('input[name="rating"]').value;
             const comment = form.querySelector('textarea').value;
+            const method = form.dataset.method || 'POST';
 
             if (rating == 0) {
                 feedback.textContent = "Please select a rating.";
@@ -132,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const csrf = document.querySelector('meta[name="csrf-token"]').content;
                 const res = await fetch(`/api/products/${encodeURIComponent(sku)}/reviews`, {
-                    method: 'POST',
+                    method: method,
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrf
@@ -143,13 +146,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (res.ok) {
-                    feedback.textContent = "Review submitted!";
+                    feedback.textContent = "Review saved!";
                     feedback.className = "feedback ms-2 small fw-bold text-success";
-                    btn.textContent = "Submitted";
+                    btn.textContent = "Saved";
+                    // Reset to POST just in case, though usually done.
                 } else if (res.status === 409) {
-                    feedback.textContent = "You already reviewed this.";
+                    feedback.textContent = "You reviewed this. Update?";
                     feedback.className = "feedback ms-2 small fw-bold text-warning";
-                    btn.textContent = "Update (Not Impl)";
+                    btn.textContent = "Update Review";
+                    btn.disabled = false;
+                    form.dataset.method = 'PUT'; // Switch to update mode
                 } else {
                     feedback.textContent = data.error || "Error";
                     feedback.className = "feedback ms-2 small fw-bold text-danger";

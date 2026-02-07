@@ -232,6 +232,11 @@
         });
     });
 
+    // Store original text
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.textContent;
+    let currentMethod = 'POST';
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const rating = parseInt(ratingInput.value);
@@ -244,9 +249,12 @@
             return;
         }
 
+        submitBtn.disabled = true;
+        feedback.textContent = '';
+
         try {
             const res = await fetch(`/api/products/${encodeURIComponent(SKU)}/reviews`, {
-                method: 'POST',
+                method: currentMethod,
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken()
@@ -255,7 +263,7 @@
             });
             const data = await res.json();
             if (res.ok) {
-                feedback.textContent = 'Review submitted successfully!';
+                feedback.textContent = 'Review saved successfully!';
                 feedback.className = 'text-success small';
                 form.reset();
                 stars.forEach(s => {
@@ -263,8 +271,16 @@
                     s.classList.add('bi-star');
                 });
                 ratingInput.value = '0';
+                currentMethod = 'POST';
+                submitBtn.textContent = originalBtnText;
+
                 // Refresh reviews
                 renderReviews(await fetchReviews());
+            } else if (res.status === 409) {
+                feedback.textContent = 'You already reviewed this. Update existing review?';
+                feedback.className = 'text-warning small';
+                currentMethod = 'PUT';
+                submitBtn.textContent = 'Update Review';
             } else {
                 feedback.textContent = data.error || 'Failed to submit review.';
                 feedback.className = 'text-danger small';
@@ -273,6 +289,8 @@
             console.error(err);
             feedback.textContent = 'Network error.';
             feedback.className = 'text-danger small';
+        } finally {
+            submitBtn.disabled = false;
         }
     });
   }
