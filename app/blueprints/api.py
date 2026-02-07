@@ -58,7 +58,7 @@ def list_products():
     }), 200
 
 @api_bp.route('/products/<string:sku>', methods=['GET'])
-@cache.cached(timeout=300)
+@cache.memoize(timeout=300)
 def get_product(sku):
     product = Product.query.options(
         joinedload(Product.images),
