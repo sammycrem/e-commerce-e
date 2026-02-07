@@ -839,7 +839,9 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
             "variant_sku": v.sku,
             "category": v.product.category,
             "weight_grams": v.product.weight_grams,
-            "dimensions_json": v.product.dimensions_json
+            "dimensions_json": v.product.dimensions_json,
+            "images": [serialize_image(img) for img in v.product.images],
+            "variants": [serialize_variant(v)] # Snapshot the specific variant
         }
 
         cart_items.append({

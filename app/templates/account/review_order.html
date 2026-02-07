@@ -45,7 +45,13 @@
                         {% endif %}
                         <div>
                             <h5 class="card-title fw-bold mb-1">{{ product.name }}</h5>
-                            <p class="text-muted small mb-0">{{ product.variants[0].color_name }} / {{ product.variants[0].size }}</p>
+                            <p class="text-muted small mb-0">
+                                {% if product.variants and product.variants|length > 0 %}
+                                    {{ product.variants[0].color_name }} / {{ product.variants[0].size }}
+                                {% else %}
+                                    {{ item.variant_sku }}
+                                {% endif %}
+                            </p>
                             <small class="text-muted">SKU: {{ item.variant_sku }}</small>
                         </div>
                     </div>
