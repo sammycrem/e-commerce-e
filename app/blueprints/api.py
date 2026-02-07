@@ -86,6 +86,16 @@ def add_product_review(sku):
     product = Product.query.filter_by(product_sku=sku).first_or_404()
     data = request.get_json() or {}
 
+    # Check if user has ordered this product
+    variant_skus = [v.sku for v in product.variants]
+    has_ordered = db.session.query(OrderItem).join(Order).filter(
+        Order.user_id == current_user.id,
+        OrderItem.variant_sku.in_(variant_skus)
+    ).count() > 0
+
+    if not has_ordered:
+        return jsonify({"error": "You must purchase this product to leave a review."}), 403
+
     rating = int(data.get('rating', 0))
     comment = data.get('comment', '').strip()
 

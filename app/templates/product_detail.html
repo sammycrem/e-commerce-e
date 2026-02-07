@@ -320,7 +320,7 @@
                                 <div id="review-feedback" class="mt-2"></div>
                             </div>
                         </div>
-                    {% else %}
+                    {% elif has_ordered %}
                         <div class="card mb-4 shadow-sm" id="review-form-container">
                             <div class="card-body">
                                 <h5 class="card-title">Write a Review</h5>
@@ -344,6 +344,10 @@
                                 </form>
                                 <div id="review-feedback" class="mt-2"></div>
                             </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            You must purchase this product to leave a review.
                         </div>
                     {% endif %}
                 {% else %}
