@@ -235,7 +235,32 @@
     // Store original text
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.textContent;
-    let currentMethod = 'POST';
+    let currentMethod = form.dataset.method || 'POST';
+
+    // Initialize stars based on existing value (for edit mode)
+    const initialRating = parseInt(ratingInput.value || '0');
+    if (initialRating > 0) {
+        stars.forEach(s => {
+            const sVal = parseInt(s.dataset.value);
+            if (sVal <= initialRating) {
+                s.classList.remove('bi-star');
+                s.classList.add('bi-star-fill');
+            }
+        });
+    }
+
+    // Handle Edit Button Toggle
+    const editBtn = $('#edit-review-btn');
+    const formContainer = $('#review-form-container');
+    if (editBtn && formContainer) {
+        editBtn.addEventListener('click', () => {
+            formContainer.classList.toggle('d-none');
+            if (!formContainer.classList.contains('d-none')) {
+                // Scroll to form
+                formContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -265,17 +290,28 @@
             if (res.ok) {
                 feedback.textContent = 'Review saved successfully!';
                 feedback.className = 'text-success small';
-                form.reset();
-                stars.forEach(s => {
-                    s.classList.remove('bi-star-fill');
-                    s.classList.add('bi-star');
-                });
-                ratingInput.value = '0';
-                currentMethod = 'POST';
-                submitBtn.textContent = originalBtnText;
+                // Don't reset form if updating, maybe hide it?
+                // For now just refresh reviews
 
                 // Refresh reviews
                 renderReviews(await fetchReviews());
+
+                if (currentMethod === 'PUT') {
+                    // Update mode specific
+                    setTimeout(() => {
+                        feedback.textContent = '';
+                        // Optionally hide form again
+                        if(formContainer) formContainer.classList.add('d-none');
+                    }, 2000);
+                } else {
+                    // Create mode specific
+                    form.reset();
+                    stars.forEach(s => {
+                        s.classList.remove('bi-star-fill');
+                        s.classList.add('bi-star');
+                    });
+                    ratingInput.value = '0';
+                }
             } else if (res.status === 409) {
                 feedback.textContent = 'You already reviewed this. Update existing review?';
                 feedback.className = 'text-warning small';

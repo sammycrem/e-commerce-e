@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, abort, send_from_directory, request, jsonify, redirect, url_for, session
 from flask_login import current_user, login_required, logout_user, login_user
-from ..models import User, Product, Promotion, Country, GlobalSetting, AppCurrency, Order, Category
+from ..models import User, Product, Promotion, Country, GlobalSetting, AppCurrency, Order, Category, Review
 from ..extensions import db, limiter, cache
 from sqlalchemy.orm import joinedload
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -32,7 +32,11 @@ def shop_page():
 
 @main_bp.route('/product/<string:sku>')
 def product_page(sku):
-    return render_template('product_detail.html', sku=sku)
+    product = Product.query.filter_by(product_sku=sku).first()
+    user_review = None
+    if product and current_user.is_authenticated:
+        user_review = Review.query.filter_by(user_id=current_user.id, product_id=product.id).first()
+    return render_template('product_detail.html', sku=sku, user_review=user_review)
 
 @main_bp.route('/profile')
 @login_required
