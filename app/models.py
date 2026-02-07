@@ -43,6 +43,17 @@ class Product(db.Model):
     images = db.relationship('ProductImage', back_populates='product', cascade='all, delete-orphan', order_by='ProductImage.display_order')
     reviews = db.relationship('Review', back_populates='product', cascade='all, delete-orphan')
 
+    @property
+    def average_rating(self):
+        if not self.reviews:
+            return 0
+        total = sum(r.rating for r in self.reviews)
+        return round(total / len(self.reviews), 1)
+
+    @property
+    def review_count(self):
+        return len(self.reviews)
+
 class Variant(db.Model):
     __tablename__ = 'variants'
     id = db.Column(db.Integer, primary_key=True)

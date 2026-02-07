@@ -1096,7 +1096,7 @@ def serialize_variant(variant):
 def serialize_review(review):
     return {
         "id": review.id,
-        "user_name": review.user.username,
+        "user_name": review.user.username if review.user else "Anonymous",
         "rating": review.rating,
         "comment": review.comment,
         "created_at": review.created_at.isoformat()
@@ -1119,6 +1119,8 @@ def serialize_product(product):
         "weight_grams": product.weight_grams,
         "dimensions_json": product.dimensions_json or {"length": 0, "width": 0, "height": 0},
         "is_active": product.is_active,
+        "average_rating": product.average_rating,
+        "review_count": product.review_count,
         "images": [serialize_image(img) for img in product.images],
         "variants": [serialize_variant(var) for var in product.variants],
         "reviews": [serialize_review(r) for r in product.reviews]

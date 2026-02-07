@@ -27,7 +27,7 @@ def index():
 @main_bp.route('/shop')
 @cache.cached(timeout=60, query_string=True)
 def shop_page():
-    products = Product.query.all()
+    products = Product.query.filter_by(is_active=True).all()
     return render_template('shop.html', products=products)
 
 @main_bp.route('/product/<string:sku>')
