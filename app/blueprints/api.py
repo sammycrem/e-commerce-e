@@ -177,6 +177,35 @@ def get_public_settings():
 # Admin APIs
 # -------------------------------------------------------------------------
 
+@api_bp.route('/admin/products', methods=['POST'])
+@login_required
+def admin_create_product():
+    check_admin()
+    data = request.get_json() or {}
+    if not data.get('product_sku'):
+        return jsonify({"error": "SKU required"}), 400
+    if Product.query.filter_by(product_sku=data['product_sku']).first():
+         return jsonify({"error": "SKU exists"}), 409
+
+    try:
+        _create_product_internal(data)
+        db.session.commit()
+        try:
+            cache.delete_memoized(list_products)
+        except Exception:
+            pass
+
+        product = Product.query.filter_by(product_sku=data['product_sku']).one()
+        full_product = Product.query.options(
+            joinedload(Product.images),
+            joinedload(Product.variants).joinedload(Variant.images)
+        ).filter_by(id=product.id).one()
+        return jsonify(serialize_product(full_product)), 201
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @api_bp.route('/admin/products', methods=['GET'])
 @login_required
 def admin_list_products():
