@@ -60,6 +60,32 @@ def order_detail(public_order_id):
 @login_required
 def review_order_page(public_order_id):
     order = Order.query.filter_by(public_order_id=public_order_id, user_id=current_user.id).first_or_404()
+
+    # Augment items with current product images if snapshot is missing them (legacy orders)
+    from app.models import Product
+    from app.utils import serialize_image
+
+    for item in order.items:
+        snapshot = item.product_snapshot or {}
+        if 'images' not in snapshot or not snapshot['images']:
+            # Fetch current product images
+            p = Product.query.filter_by(product_sku=item.variant_sku.split('-')[0] if '-' in item.variant_sku else item.variant_sku).first()
+            if not p:
+                # Try exact SKU match if variant sku isn't structured or fallback
+                p = Product.query.filter_by(product_sku=item.variant_sku).first()
+
+            # If product found (even if variant sku logic is fuzzy), use its images
+            # Better: use the product_sku from snapshot if available
+            if not p and snapshot.get('product_sku'):
+                p = Product.query.filter_by(product_sku=snapshot['product_sku']).first()
+
+            if p and p.images:
+                # We need to update the snapshot in memory for the template (not saving to DB to preserve history)
+                # snapshot is a dict, we can modify it
+                snapshot['images'] = [serialize_image(img) for img in p.images]
+                # Update the item object (SQLAlchemy objects track changes, but we won't commit)
+                item.product_snapshot = snapshot
+
     return render_template('account/review_order.html', order=order)
 
 @account_bp.route('/orders/<string:public_order_id>/message', methods=['POST'])
