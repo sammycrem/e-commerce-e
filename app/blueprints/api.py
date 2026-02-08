@@ -621,12 +621,18 @@ def admin_import_products():
             for p_data in products_data:
                 _create_product_internal(p_data)
         else:
+            # Batch fetch existing products to avoid N+1 queries
+            import_skus = [p.get('product_sku') for p in products_data if p.get('product_sku')]
+            existing_products = Product.query.filter(Product.product_sku.in_(import_skus)).all()
+            existing_map = {p.product_sku: p for p in existing_products}
+
             for p_data in products_data:
                 sku = p_data.get('product_sku')
-                existing = Product.query.filter_by(product_sku=sku).first()
-                if existing:
+                if not sku: continue
+
+                if sku in existing_map:
                     if mode == 'update':
-                        _update_product_internal(existing, p_data)
+                        _update_product_internal(existing_map[sku], p_data)
                 else:
                     _create_product_internal(p_data)
         db.session.commit()

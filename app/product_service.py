@@ -90,6 +90,9 @@ def _create_product_internal(data):
         weight_grams=data.get('weight_grams'),
         dimensions_json=data.get('dimensions_json')
     )
+    if 'is_active' in data:
+        product.is_active = bool(data.get('is_active'))
+
     db.session.add(product)
     db.session.flush()
 
@@ -97,7 +100,6 @@ def _create_product_internal(data):
         url = img.get('url') if isinstance(img, dict) else str(img)
         alt = img.get('alt_text') if isinstance(img, dict) else ''
         order = int(img.get('display_order', img.get('order', idx)) if isinstance(img, dict) else idx)
-        # ensure_icon needs app_root_path. current_app.root_path
         ensure_icon_for_url(url, current_app.root_path)
         pimg = ProductImage(product_id=product.id, url=url, alt_text=alt, display_order=order)
         db.session.add(pimg)
@@ -137,7 +139,10 @@ def _update_product_internal(product, data):
     product.base_price_cents = int(data.get('base_price_cents', product.base_price_cents or 0))
     product.weight_grams = data.get('weight_grams', product.weight_grams)
     product.dimensions_json = data.get('dimensions_json', product.dimensions_json)
+    if 'is_active' in data:
+        product.is_active = bool(data.get('is_active'))
 
+    # Replace Images
     ProductImage.query.filter_by(product_id=product.id).delete()
     for idx, img in enumerate(data.get('images', [])):
         url = img.get('url') if isinstance(img, dict) else str(img)
@@ -147,9 +152,15 @@ def _update_product_internal(product, data):
         pimg = ProductImage(product_id=product.id, url=url, alt_text=alt, display_order=order)
         db.session.add(pimg)
 
-    existing_vars = Variant.query.filter_by(product_id=product.id).all()
-    for v in existing_vars:
-        db.session.delete(v)
+    # Replace Variants: Optimized Delete
+    # First, delete all VariantImages associated with these variants
+    # Subquery for variant IDs to delete
+    variant_ids_q = db.session.query(Variant.id).filter(Variant.product_id == product.id)
+    VariantImage.query.filter(VariantImage.variant_id.in_(variant_ids_q)).delete(synchronize_session=False)
+
+    # Then delete the variants themselves
+    Variant.query.filter(Variant.product_id == product.id).delete(synchronize_session=False)
+
     db.session.flush()
 
     for v_data in data.get('variants', []):

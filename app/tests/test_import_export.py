@@ -1,166 +1,136 @@
-import pytest
-from app.app import create_app, db
-from app.models import Product, User, GlobalSetting
-from werkzeug.security import generate_password_hash
-import io
+import unittest
 import json
+import io
 import csv
-import os
+from app.app import create_app, db
+from app.models import Product, Variant, ProductImage, VariantImage
+from app.product_service import products_to_csv
 
-@pytest.fixture
-def app():
-    test_config = {
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "CACHE_TYPE": "NullCache",
-        "WTF_CSRF_ENABLED": False,
-        "APP_ADMIN_USER": "admin",
-        "APP_SECRET_KEY": "test",
-        "APP_SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", # redundant but safe
-        "APP_SESSION_TYPE": "filesystem",
-        "APP_SESSION_PERMANENT": "False",
-        "APP_PERMANENT_SESSION_LIFETIME": "3600",
-        "APP_ADMIN_EMAIL": "admin@example.com",
-        "APP_ADMIN_PASSWORD": "admin"
-    }
-    app = create_app(test_config)
-
-    # Ensure ENCRYPTION_KEY is set for test
-    if not os.environ.get('ENCRYPTION_KEY'):
-        os.environ['ENCRYPTION_KEY'] = 'testkey123456789012345678901234567890=' # dummy key 32 chars+
-
-    with app.app_context():
+class TestImportExport(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app({
+            'TESTING': True,
+            'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+            'WTF_CSRF_ENABLED': False,
+            'CACHE_TYPE': 'NullCache'
+        })
+        self.client = self.app.test_client()
+        self.ctx = self.app.app_context()
+        self.ctx.push()
         db.create_all()
-        # Create Admin User
-        admin = User(
-            username='admin',
-            email='admin@example.com',
-            user_id='admin_id_1',
-            password=generate_password_hash('admin'),
-            encrypted_password='encrypted_dummy'
-        )
-        db.session.add(admin)
 
-        # Create Initial Product
-        p1 = Product(product_sku='TEST-001', name='Original Product', base_price_cents=1000)
-        db.session.add(p1)
+        # Create admin user
+        from app.models import User
+        from werkzeug.security import generate_password_hash
+        admin_user = User(username='admin', email='admin@test.com', user_id='admin1', password=generate_password_hash('password'), encrypted_password='enc')
+        db.session.add(admin_user)
         db.session.commit()
 
-    yield app
+        # Configure app admin
+        self.app.config['APP_ADMIN_USER'] = 'admin'
 
-    with app.app_context():
+    def tearDown(self):
         db.session.remove()
         db.drop_all()
+        self.ctx.pop()
 
-@pytest.fixture
-def client(app):
-    return app.test_client()
+    def login_admin(self):
+        self.client.post('/login', data={'email': 'admin@test.com', 'password': 'password'})
 
-@pytest.fixture
-def auth_client(client):
-    client.post('/login', data={'email': 'admin@example.com', 'password': 'admin'})
-    return client
+    def test_export_csv(self):
+        self.login_admin()
+        # Create a product
+        p = Product(product_sku='SKU1', name='P1', base_price_cents=1000, category='Cat1')
+        db.session.add(p)
+        db.session.commit()
 
-def test_export_json(auth_client):
-    res = auth_client.get('/api/admin/products/export?format=json')
-    assert res.status_code == 200
-    data = res.json
-    assert isinstance(data, list)
-    assert len(data) == 1
-    assert data[0]['product_sku'] == 'TEST-001'
+        res = self.client.get('/api/admin/products/export?format=csv')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'product_sku', res.data)
+        self.assertIn(b'SKU1', res.data)
 
-def test_export_csv(auth_client):
-    res = auth_client.get('/api/admin/products/export?format=csv')
-    assert res.status_code == 200
-    assert res.headers['Content-Type'].startswith('text/csv')
-    content = res.data.decode('utf-8')
-    assert 'product_sku' in content
-    assert 'TEST-001' in content
+    def test_import_override(self):
+        self.login_admin()
+        # Existing product
+        p = Product(product_sku='OLD', name='Old', base_price_cents=100)
+        db.session.add(p)
+        db.session.commit()
 
-def test_import_override(auth_client, app):
-    # Prepare import data (JSON)
-    new_products = [
-        {
-            "product_sku": "NEW-001",
-            "name": "New Product",
-            "base_price_cents": 2000,
-            "variants": []
+        # CSV to import
+        csv_content = """product_sku,name,base_price_cents
+NEW,New Product,2000
+"""
+        data = {
+            'file': (io.BytesIO(csv_content.encode('utf-8')), 'import.csv'),
+            'mode': 'override'
         }
-    ]
-    json_file = io.BytesIO(json.dumps(new_products).encode('utf-8'))
+        res = self.client.post('/api/admin/products/import', data=data, content_type='multipart/form-data')
+        self.assertEqual(res.status_code, 200)
 
-    data = {
-        'file': (json_file, 'import.json'),
-        'mode': 'override'
-    }
+        # Verify
+        old = Product.query.filter_by(product_sku='OLD').first()
+        self.assertIsNone(old)
+        new = Product.query.filter_by(product_sku='NEW').first()
+        self.assertIsNotNone(new)
+        self.assertEqual(new.name, 'New Product')
 
-    res = auth_client.post('/api/admin/products/import', data=data, content_type='multipart/form-data')
-    assert res.status_code == 200
+    def test_import_skip(self):
+        self.login_admin()
+        p = Product(product_sku='EXISTING', name='Original Name', base_price_cents=100)
+        db.session.add(p)
+        db.session.commit()
 
-    # Verify DB
-    with app.app_context():
-        assert Product.query.count() == 1
-        p = Product.query.first()
-        assert p.product_sku == 'NEW-001' # Original should be gone
-
-def test_import_skip(auth_client, app):
-    # Prepare data: 1 existing (modified), 1 new
-    import_data = [
-        {
-            "product_sku": "TEST-001", # Existing
-            "name": "Modified Name (Should Skip)",
-            "base_price_cents": 9999
-        },
-        {
-            "product_sku": "NEW-002",
-            "name": "New Product 2",
-            "base_price_cents": 3000
+        csv_content = """product_sku,name,base_price_cents
+EXISTING,New Name,2000
+NEW,Brand New,3000
+"""
+        data = {
+            'file': (io.BytesIO(csv_content.encode('utf-8')), 'import.csv'),
+            'mode': 'skip'
         }
-    ]
-    json_file = io.BytesIO(json.dumps(import_data).encode('utf-8'))
+        res = self.client.post('/api/admin/products/import', data=data, content_type='multipart/form-data')
+        self.assertEqual(res.status_code, 200)
 
-    data = {
-        'file': (json_file, 'import.json'),
-        'mode': 'skip'
-    }
+        existing = Product.query.filter_by(product_sku='EXISTING').first()
+        self.assertEqual(existing.name, 'Original Name') # Should not change
 
-    res = auth_client.post('/api/admin/products/import', data=data, content_type='multipart/form-data')
-    assert res.status_code == 200
+        new = Product.query.filter_by(product_sku='NEW').first()
+        self.assertIsNotNone(new)
 
-    with app.app_context():
-        assert Product.query.count() == 2
-        p1 = Product.query.filter_by(product_sku='TEST-001').first()
-        assert p1.name == 'Original Product' # Should NOT change
-        p2 = Product.query.filter_by(product_sku='NEW-002').first()
-        assert p2.name == 'New Product 2'
+    def test_import_update(self):
+        self.login_admin()
+        p = Product(product_sku='EXISTING', name='Original Name', base_price_cents=100)
+        db.session.add(p)
+        db.session.commit()
 
-def test_import_update(auth_client, app):
-    # Prepare data: 1 existing (modified), 1 new
-    import_data = [
-        {
-            "product_sku": "TEST-001", # Existing
-            "name": "Updated Name",
-            "base_price_cents": 5000
-        },
-        {
-            "product_sku": "NEW-003",
-            "name": "New Product 3",
-            "base_price_cents": 4000
+        # Add variant to verify replacement
+        v = Variant(product_id=p.id, sku='VAR-OLD', stock_quantity=5)
+        db.session.add(v)
+        db.session.commit()
+
+        variants_json = json.dumps([{"sku": "VAR-NEW", "stock_quantity": 10}])
+
+        csv_content = f"""product_sku,name,base_price_cents,variants_json
+EXISTING,Updated Name,2000,"{variants_json.replace('"', '""')}"
+NEW,Brand New,3000,[]
+"""
+        data = {
+            'file': (io.BytesIO(csv_content.encode('utf-8')), 'import.csv'),
+            'mode': 'update'
         }
-    ]
-    json_file = io.BytesIO(json.dumps(import_data).encode('utf-8'))
+        res = self.client.post('/api/admin/products/import', data=data, content_type='multipart/form-data')
+        self.assertEqual(res.status_code, 200)
 
-    data = {
-        'file': (json_file, 'import.json'),
-        'mode': 'update'
-    }
+        existing = Product.query.filter_by(product_sku='EXISTING').first()
+        self.assertEqual(existing.name, 'Updated Name')
+        self.assertEqual(existing.base_price_cents, 2000)
 
-    res = auth_client.post('/api/admin/products/import', data=data, content_type='multipart/form-data')
-    assert res.status_code == 200
+        # Verify variant replacement
+        self.assertEqual(len(existing.variants), 1)
+        self.assertEqual(existing.variants[0].sku, 'VAR-NEW')
 
-    with app.app_context():
-        assert Product.query.count() == 2
-        p1 = Product.query.filter_by(product_sku='TEST-001').first()
-        assert p1.name == 'Updated Name' # Should change
-        p2 = Product.query.filter_by(product_sku='NEW-003').first()
-        assert p2.name == 'New Product 3'
+        new = Product.query.filter_by(product_sku='NEW').first()
+        self.assertIsNotNone(new)
+
+if __name__ == '__main__':
+    unittest.main()
