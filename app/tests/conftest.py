@@ -10,21 +10,22 @@ os.environ['OPENAI_API_KEY'] = 'dummy-key-for-testing'
 if 'ENCRYPTION_KEY' not in os.environ:
     os.environ['ENCRYPTION_KEY'] = 'VMzJvnz8S36yhK0CTx08v63hx4Py_yTTs85xHE6usFo='
 
-from app.app import app as flask_app
-from app.app import setup_database
+from app.app import create_app, setup_database
 from app.extensions import db
 from app.models import Product, Variant, User
 
 @pytest.fixture
 def app():
     """Create and configure a new app instance for each test."""
-    flask_app.config.update({
+    test_config = {
         "TESTING": True,
         # Use a temporary in-memory SQLite DB for tests
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "WTF_CSRF_ENABLED": False,
         "SECRET_KEY": "testing-secret",
-    })
+        "RATELIMIT_ENABLED": False,
+    }
+    flask_app = create_app(test_config)
 
     with flask_app.app_context():
         db.drop_all()

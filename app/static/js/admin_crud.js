@@ -37,6 +37,91 @@
     const saveBtn = $('#save-product');
     const delBtn = $('#delete-product');
 
+    // --- Import / Export Logic ---
+    const importModalEl = document.getElementById('importModal');
+    let importModal;
+    if (importModalEl && window.bootstrap) {
+        importModal = new bootstrap.Modal(importModalEl);
+    }
+
+    // Export Handlers
+    const exportJsonBtn = $('#btn-export-json');
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/api/admin/products/export?format=json';
+        });
+    }
+
+    const exportCsvBtn = $('#btn-export-csv');
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/api/admin/products/export?format=csv';
+        });
+    }
+
+    // Import Handlers
+    const importBtn = $('#btn-import-products');
+    if (importBtn && importModal) {
+        importBtn.addEventListener('click', () => {
+             // Reset form
+             const form = $('#importForm');
+             if (form) form.reset();
+             importModal.show();
+        });
+    }
+
+    const confirmImportBtn = $('#btn-confirm-import');
+    if (confirmImportBtn) {
+        confirmImportBtn.addEventListener('click', async () => {
+            const fileInput = $('#importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select a file.");
+                return;
+            }
+
+            const mode = document.querySelector('input[name="importMode"]:checked').value;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('mode', mode);
+
+            // Disable button
+            confirmImportBtn.disabled = true;
+            confirmImportBtn.textContent = 'Importing...';
+
+            try {
+                const headers = {};
+                const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
+                const res = await fetch('/api/admin/products/import', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showFeedback(data.message || 'Import successful', 'success');
+                    importModal.hide();
+                    loadProducts(); // Refresh list
+                } else {
+                    alert(data.error || 'Import failed');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred during import.');
+            } finally {
+                confirmImportBtn.disabled = false;
+                confirmImportBtn.textContent = 'Import';
+            }
+        });
+    }
+    // ----------------------------
+
     if (!imagesContainer || !variantsContainer) return;
 
     function showFeedback(msg, type = 'info') {
@@ -60,8 +145,13 @@
 
         try {
           showFeedback('Uploading...');
+          const headers = {};
+          const csrfToken = document.querySelector('meta[name="csrf-token"]');
+          if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
           const res = await fetch('/api/admin/upload-image', {
             method: 'POST',
+            headers: headers,
             body: formData
           });
           const data = await res.json();
@@ -255,12 +345,13 @@
 
     // Load products list
     async function loadProducts() {
-      const res = await fetch('/api/products');
+      const res = await fetch('/api/admin/products');
       const data = await res.json();
       productList.innerHTML = '';
       // support both { products: [...] } and direct array
       const list = Array.isArray(data) ? data : (data.products || []);
       list.forEach(p => {
+        if (p.is_active === false) return; // Hide soft-deleted products
         const item = el('div', { class: 'product-list-item', style: 'padding:6px; border-bottom:1px solid #eee; cursor:pointer;' }, `${p.name} (${p.product_sku})`);
         item.addEventListener('click', () => loadProduct(p.product_sku)); // use SKU!
         productList.appendChild(item);
@@ -269,7 +360,7 @@
 
     // Load single product by SKU
     async function loadProduct(sku) {
-      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`);
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(sku)}`);
       if (!res.ok) return showFeedback(`Failed to load product ${sku}`, 'error');
       const p = await res.json();
       $('#product_sku').value = p.product_sku;
@@ -360,10 +451,14 @@
 
       const editSku = saveBtn.dataset.editSku;
       const method = editSku ? 'PUT' : 'POST';
-      const url = editSku ? `/api/products/${encodeURIComponent(editSku)}` : '/api/products';
+      const url = editSku ? `/api/admin/products/${encodeURIComponent(editSku)}` : '/api/admin/products';
 
       try {
-        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const headers = { 'Content-Type': 'application/json' };
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
+        const res = await fetch(url, { method, headers: headers, body: JSON.stringify(payload) });
         const data = await res.json();
         if (res.ok) {
           showFeedback(`Product ${data.name} saved.`, 'success');
@@ -382,7 +477,12 @@
       const sku = saveBtn.dataset.editSku;
       if (!sku) return showFeedback('No product selected', 'error');
       if (!confirm('Delete this product?')) return;
-      const res = await fetch(`/api/products/${encodeURIComponent(sku)}`, { method: 'DELETE' });
+
+      const headers = {};
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      if (csrfToken) headers['X-CSRFToken'] = csrfToken.content;
+
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(sku)}`, { method: 'DELETE', headers: headers });
       if (res.ok) {
         showFeedback('Deleted', 'success');
         loadProducts();

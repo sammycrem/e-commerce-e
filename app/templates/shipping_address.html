@@ -54,6 +54,7 @@
                             <div class="d-flex gap-2">
                                 <a href="{{ url_for('checkout_bp.edit_address', address_id=address.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                 <form method="POST" action="{{ url_for('checkout_bp.shipping_address') }}" class="d-inline">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="address_id" value="{{ address.id }}">
                                     <button type="submit" name="delete_address" class="btn btn-sm btn-outline-danger">Delete</button>
                                 </form>
@@ -118,6 +119,7 @@
             </div>
             <div class="modal-body p-4">
                 <form method="POST" action="{{ url_for('checkout_bp.shipping_address') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="address_type" class="form-label small fw-bold">Address Type</label>
                         <select class="form-select" id="address_type" name="address_type" required>

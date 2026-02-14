@@ -11,6 +11,11 @@
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const formatPrice = cents => `${window.appConfig.currencySymbol}${(cents/100).toFixed(2)}`;
 
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  }
+
   function getIconUrl(url) {
     if (!url || !url.includes('/static/')) return url;
     const dotIdx = url.lastIndexOf('.');
@@ -143,7 +148,10 @@
       const res = await fetch('/api/cart', {
         method: 'POST',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify({ sku, quantity: Math.max(0, quantity) })
       });
       if (res.ok) {
@@ -171,6 +179,166 @@
         container.appendChild(badge);
     });
   }
+
+  // --- REVIEWS LOGIC ---
+  function renderReviews(reviews) {
+    const list = $('#reviews-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!reviews || !reviews.length) {
+        list.innerHTML = '<p class="text-muted">No reviews yet. Be the first to review!</p>';
+        return;
+    }
+    reviews.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'review-card';
+        div.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <strong>${r.user_name}</strong>
+                <small class="text-muted">${new Date(r.created_at).toLocaleDateString()}</small>
+            </div>
+            <div class="star-rating mb-2">
+                ${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}
+            </div>
+            <p class="mb-0">${r.comment}</p>
+        `;
+        list.appendChild(div);
+    });
+  }
+
+  function setupReviewForm() {
+    const form = $('#review-form');
+    if (!form) return;
+
+    // Star rating interaction
+    const ratingContainer = $('#rating-input');
+    const stars = $$('i', ratingContainer);
+    const ratingInput = $('#rating-value');
+
+    stars.forEach(star => {
+        star.addEventListener('click', () => {
+            const val = parseInt(star.dataset.value);
+            ratingInput.value = val;
+            stars.forEach(s => {
+                const sVal = parseInt(s.dataset.value);
+                if (sVal <= val) {
+                    s.classList.remove('bi-star');
+                    s.classList.add('bi-star-fill');
+                } else {
+                    s.classList.remove('bi-star-fill');
+                    s.classList.add('bi-star');
+                }
+            });
+        });
+    });
+
+    // Store original text
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.textContent;
+    let currentMethod = form.dataset.method || 'POST';
+
+    // Initialize stars based on existing value (for edit mode)
+    const initialRating = parseInt(ratingInput.value || '0');
+    if (initialRating > 0) {
+        stars.forEach(s => {
+            const sVal = parseInt(s.dataset.value);
+            if (sVal <= initialRating) {
+                s.classList.remove('bi-star');
+                s.classList.add('bi-star-fill');
+            }
+        });
+    }
+
+    // Handle Edit Button Toggle
+    const editBtn = $('#edit-review-btn');
+    const formContainer = $('#review-form-container');
+    if (editBtn && formContainer) {
+        editBtn.addEventListener('click', () => {
+            formContainer.classList.toggle('d-none');
+            if (!formContainer.classList.contains('d-none')) {
+                // Scroll to form
+                formContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rating = parseInt(ratingInput.value);
+        const comment = $('#review-comment').value;
+        const feedback = $('#review-feedback');
+
+        if (!rating) {
+            feedback.textContent = 'Please select a rating.';
+            feedback.className = 'text-danger small';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        feedback.textContent = '';
+
+        try {
+            const res = await fetch(`/api/products/${encodeURIComponent(SKU)}/reviews`, {
+                method: currentMethod,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ rating, comment })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                feedback.textContent = 'Review saved successfully!';
+                feedback.className = 'text-success small';
+                // Don't reset form if updating, maybe hide it?
+                // For now just refresh reviews
+
+                // Refresh reviews
+                renderReviews(await fetchReviews());
+
+                if (currentMethod === 'PUT') {
+                    // Update mode specific
+                    setTimeout(() => {
+                        feedback.textContent = '';
+                        // Optionally hide form again
+                        if(formContainer) formContainer.classList.add('d-none');
+                    }, 2000);
+                } else {
+                    // Create mode specific
+                    form.reset();
+                    stars.forEach(s => {
+                        s.classList.remove('bi-star-fill');
+                        s.classList.add('bi-star');
+                    });
+                    ratingInput.value = '0';
+                }
+            } else if (res.status === 409) {
+                feedback.textContent = 'You already reviewed this. Update existing review?';
+                feedback.className = 'text-warning small';
+                currentMethod = 'PUT';
+                submitBtn.textContent = 'Update Review';
+            } else {
+                feedback.textContent = data.error || 'Failed to submit review.';
+                feedback.className = 'text-danger small';
+            }
+        } catch (err) {
+            console.error(err);
+            feedback.textContent = 'Network error.';
+            feedback.className = 'text-danger small';
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+  }
+
+  async function fetchReviews() {
+      try {
+          const res = await fetch(`/api/products/${encodeURIComponent(SKU)}/reviews`);
+          if (res.ok) return await res.json();
+      } catch (e) { console.error(e); }
+      return [];
+  }
+  // ---------------------
 
   // state
   let product = null;
@@ -347,7 +515,10 @@
     try {
       const res = await fetch('/api/cart', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
         body: JSON.stringify(payload),
         credentials: 'same-origin'
       });
@@ -397,6 +568,10 @@
       // Related & Proposed Products
       fetchAndRenderProductList(product.related_products, '#related-products-list', '#related-products-section');
       fetchAndRenderProductList(product.proposed_products, '#proposed-products-list', '#proposed-products-section');
+
+      // Reviews
+      renderReviews(product.reviews || []);
+      setupReviewForm();
 
       // Refresh cart sidebar on init
       refreshCartSidebar();

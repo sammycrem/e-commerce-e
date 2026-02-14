@@ -73,6 +73,7 @@ def checkout():
     # calculate totals using helper
     promo_code = body.get('promo_code')
     shipping_method = body.get('shipping_method', 'standard')
+    payment_method = body.get('payment_method')
     calc_res = calculate_totals_internal(items, shipping_country_iso=shipping_country_iso, promo_code=promo_code, shipping_method=shipping_method, user_id=user_id)
 
     subtotal = calc_res['subtotal_cents']
@@ -90,7 +91,10 @@ def checkout():
                 vat_cents=vat,
                 shipping_cost_cents=shipping_cost,
                 total_cents=total,
-                promo_code=promo_code
+                promo_code=promo_code,
+                shipping_method=shipping_method,
+                payment_method=payment_method,
+                payment_provider=payment_method
             )
             # optionally store shipping country or address fields here
             db.session.add(new_order)
@@ -380,6 +384,7 @@ def summary():
                     total_cents=cart_summary['total_cents'],
                     shipping_method=selected_shipping,
                     payment_method=selected_payment,
+                    payment_provider=selected_payment,
                     comment=comment,
                     promo_code=promo_code,
                     shipping_address_snapshot=serialize_address(shipping_address_obj),

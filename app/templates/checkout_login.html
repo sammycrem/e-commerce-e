@@ -18,7 +18,8 @@
                     <h3 class="card-title fw-bold mb-4">Returning Customers</h3>
                     <p class="text-muted mb-4">If you have an account with us, please log in below.</p>
 
-                    <form method="POST" action="{{ url_for('login', next=url_for('checkout_bp.shipping_address')) }}">
+                    <form method="POST" action="{{ url_for('main.login', next=url_for('checkout_bp.shipping_address')) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="email" class="form-label small fw-bold">Email Address</label>
                             <div class="input-group">
@@ -80,7 +81,7 @@
                     </ul>
 
                     <div class="mt-4">
-                        <a href="{{ url_for('signup') }}" class="btn btn-outline-primary btn-lg w-100 fw-bold py-3">CREATE AN ACCOUNT</a>
+                        <a href="{{ url_for('main.signup') }}" class="btn btn-outline-primary btn-lg w-100 fw-bold py-3">CREATE AN ACCOUNT</a>
                     </div>
                 </div>
             </div>

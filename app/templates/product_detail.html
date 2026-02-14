@@ -146,6 +146,22 @@
         border-left: 1px solid #dee2e6;
         border-right: 1px solid #dee2e6;
     }
+    /* Reviews Styles */
+    .star-rating {
+        color: #ffc107;
+        font-size: 1.1rem;
+    }
+    .star-rating.interactive i {
+        cursor: pointer;
+    }
+    .review-card {
+        border-bottom: 1px solid #eee;
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+    .review-card:last-child {
+        border-bottom: none;
+    }
 </style>
 {% endblock %}
 
@@ -179,8 +195,8 @@
         <div class="col-lg-4 p-4 p-xl-5 bg-white">
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb small">
-                    <li class="breadcrumb-item"><a href="{{ url_for('home') }}" class="text-decoration-none">Home</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('shop_page') }}" class="text-decoration-none">Shop</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.home') }}" class="text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.shop_page') }}" class="text-decoration-none">Shop</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Product</li>
                 </ol>
             </nav>
@@ -264,6 +280,86 @@
                 <h4 class="fw-bold mb-4">Product Description</h4>
                 <div id="full-description-container" class="text-muted" style="white-space: pre-line; line-height: 1.6;">
                     <!-- Full description injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div id="reviews-section" class="row mt-5 pt-4 border-top">
+            <div class="col-lg-8">
+                <h4 class="fw-bold mb-4">Customer Reviews</h4>
+
+                <!-- Review Form -->
+                {% if current_user.is_authenticated %}
+                    {% if user_review %}
+                        <div class="alert alert-success mb-4 d-flex justify-content-between align-items-center">
+                            <span>You have already reviewed this product.</span>
+                            <button id="edit-review-btn" class="btn btn-sm btn-outline-success">Edit Review</button>
+                        </div>
+                        <div class="card mb-4 shadow-sm d-none" id="review-form-container">
+                            <div class="card-body">
+                                <h5 class="card-title">Update Your Review</h5>
+                                <form id="review-form" data-method="PUT" data-initial-rating="{{ user_review.rating }}" data-initial-comment="{{ user_review.comment }}">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">Rating</label>
+                                        <div class="star-rating interactive" id="rating-input">
+                                            <i class="bi bi-star" data-value="1"></i>
+                                            <i class="bi bi-star" data-value="2"></i>
+                                            <i class="bi bi-star" data-value="3"></i>
+                                            <i class="bi bi-star" data-value="4"></i>
+                                            <i class="bi bi-star" data-value="5"></i>
+                                            <input type="hidden" name="rating" id="rating-value" value="{{ user_review.rating }}">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="review-comment" class="form-label fw-bold small">Comment</label>
+                                        <textarea class="form-control" id="review-comment" rows="3" required>{{ user_review.comment }}</textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Update Review</button>
+                                </form>
+                                <div id="review-feedback" class="mt-2"></div>
+                            </div>
+                        </div>
+                    {% elif has_ordered %}
+                        <div class="card mb-4 shadow-sm" id="review-form-container">
+                            <div class="card-body">
+                                <h5 class="card-title">Write a Review</h5>
+                                <form id="review-form" data-method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small">Rating</label>
+                                        <div class="star-rating interactive" id="rating-input">
+                                            <i class="bi bi-star" data-value="1"></i>
+                                            <i class="bi bi-star" data-value="2"></i>
+                                            <i class="bi bi-star" data-value="3"></i>
+                                            <i class="bi bi-star" data-value="4"></i>
+                                            <i class="bi bi-star" data-value="5"></i>
+                                            <input type="hidden" name="rating" id="rating-value" value="0">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="review-comment" class="form-label fw-bold small">Comment</label>
+                                        <textarea class="form-control" id="review-comment" rows="3" required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                                </form>
+                                <div id="review-feedback" class="mt-2"></div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            You must purchase this product to leave a review.
+                        </div>
+                    {% endif %}
+                {% else %}
+                <div class="alert alert-info">
+                    Please <a href="{{ url_for('main.login', next=request.path) }}">login</a> to leave a review.
+                </div>
+                {% endif %}
+
+                <!-- Reviews List -->
+                <div id="reviews-list">
+                    <!-- Reviews injected here -->
+                    <p class="text-muted">Loading reviews...</p>
                 </div>
             </div>
         </div>

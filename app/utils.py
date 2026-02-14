@@ -839,7 +839,9 @@ def calculate_totals_internal(items, shipping_country_iso=None, promo_code=None,
             "variant_sku": v.sku,
             "category": v.product.category,
             "weight_grams": v.product.weight_grams,
-            "dimensions_json": v.product.dimensions_json
+            "dimensions_json": v.product.dimensions_json,
+            "images": [serialize_image(img) for img in v.product.images],
+            "variants": [serialize_variant(v)] # Snapshot the specific variant
         }
 
         cart_items.append({
@@ -1076,4 +1078,63 @@ def get_vat_rate_for_product(country_iso: str, product_category: str):
     # fallback
     return Decimal(country.default_vat_rate or 0)
 
+# Serialization Helpers
+def serialize_image(image):
+    return {"url": image.url, "alt_text": image.alt_text, "display_order": image.display_order}
 
+def serialize_variant(variant):
+    return {
+        "sku": variant.sku,
+        "color_name": variant.color_name,
+        "size": variant.size,
+        "stock_quantity": variant.stock_quantity,
+        "price_modifier_cents": variant.price_modifier_cents,
+        "final_price_cents": int((variant.product.base_price_cents or 0) + (variant.price_modifier_cents or 0)),
+        "images": [serialize_image(img) for img in variant.images]
+    }
+
+def serialize_review(review):
+    return {
+        "id": review.id,
+        "user_name": review.user.username if review.user else "Anonymous",
+        "rating": review.rating,
+        "comment": review.comment,
+        "created_at": review.created_at.isoformat()
+    }
+
+def serialize_product(product):
+    return {
+        "product_sku": product.product_sku,
+        "name": product.name,
+        "description": product.description,
+        "category": product.category,
+        "base_price_cents": product.base_price_cents,
+        "short_description": product.short_description,
+        "product_details": product.product_details,
+        "related_products": product.related_products or [],
+        "proposed_products": product.proposed_products or [],
+        "tag1": product.tag1,
+        "tag2": product.tag2,
+        "tag3": product.tag3,
+        "weight_grams": product.weight_grams,
+        "dimensions_json": product.dimensions_json or {"length": 0, "width": 0, "height": 0},
+        "is_active": product.is_active,
+        "average_rating": product.average_rating,
+        "review_count": product.review_count,
+        "images": [serialize_image(img) for img in product.images],
+        "variants": [serialize_variant(var) for var in product.variants],
+        "reviews": [serialize_review(r) for r in product.reviews]
+    }
+
+def serialize_promotion(promo):
+    return {
+        "id": promo.id,
+        "code": promo.code,
+        "description": promo.description,
+        "discount_type": promo.discount_type,
+        "discount_value": promo.discount_value,
+        "is_active": promo.is_active,
+        "valid_to": promo.valid_to.isoformat() if promo.valid_to else None,
+        "user_id": promo.user_id,
+        "username": promo.user.username if promo.user else None
+    }

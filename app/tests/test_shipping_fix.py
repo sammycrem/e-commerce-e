@@ -32,7 +32,9 @@ def client():
         )
         db.session.add(zone_eu)
 
-        # Clear products
+        # Clear products and variants
+        from app.models import Variant
+        Variant.query.delete()
         Product.query.delete()
 
         p = Product(

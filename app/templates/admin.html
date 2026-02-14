@@ -34,9 +34,23 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="p-3 border-bottom">
-                            <button id="btn-new-product" class="btn btn-primary w-100">
+                            <button id="btn-new-product" class="btn btn-primary w-100 mb-2">
                                 <i class="fas fa-plus me-2"></i>Create New Product
                             </button>
+                            <div class="d-flex gap-2">
+                                <div class="dropdown flex-grow-1">
+                                    <button class="btn btn-outline-secondary w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-download me-2"></i>Export
+                                    </button>
+                                    <ul class="dropdown-menu w-100">
+                                        <li><a class="dropdown-item" href="#" id="btn-export-json">Export as JSON</a></li>
+                                        <li><a class="dropdown-item" href="#" id="btn-export-csv">Export as CSV</a></li>
+                                    </ul>
+                                </div>
+                                <button id="btn-import-products" class="btn btn-outline-secondary flex-grow-1">
+                                    <i class="fas fa-upload me-2"></i>Import
+                                </button>
+                            </div>
                         </div>
                         <div id="product-list" class="list-group list-group-flush overflow-auto" style="max-height: 600px;">
                             <!-- Products will be loaded here -->
@@ -308,6 +322,51 @@
                             <button id="delete-category" class="btn btn-outline-danger ms-auto">Delete Category</button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORT MODAL -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Products</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="importForm">
+                        <div class="mb-3">
+                            <label for="importFile" class="form-label">Select File (JSON or CSV)</label>
+                            <input class="form-control" type="file" id="importFile" accept=".json,.csv">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Import Mode</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="importMode" id="modeOverride" value="override">
+                                <label class="form-check-label" for="modeOverride">
+                                    Override all (Replace DB)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="importMode" id="modeSkip" value="skip" checked>
+                                <label class="form-check-label" for="modeSkip">
+                                    Skip existing products (by SKU)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="importMode" id="modeUpdate" value="update">
+                                <label class="form-check-label" for="modeUpdate">
+                                    Update existing products
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-import">Import</button>
                 </div>
             </div>
         </div>

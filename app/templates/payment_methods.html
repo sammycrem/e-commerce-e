@@ -36,6 +36,7 @@
         <div class="col-lg-8">
             <div class="bg-white rounded shadow-sm p-4 mb-4">
                 <form id="payment-methods-form" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="card mb-3 border payment-card">
                         <div class="card-body d-flex align-items-center">
                             <div class="form-check flex-grow-1">
@@ -84,6 +85,30 @@
                                 </label>
                             </div>
                             <i class="bi bi-bank fs-2"></i>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3 border payment-card">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="form-check flex-grow-1">
+                                <input class="form-check-input" type="radio" name="payment_method" id="stripe" value="stripe">
+                                <label class="form-check-label h6 mb-0 ms-2" for="stripe">
+                                    Stripe
+                                </label>
+                            </div>
+                            <i class="bi bi-stripe fs-2 text-primary"></i>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3 border payment-card">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="form-check flex-grow-1">
+                                <input class="form-check-input" type="radio" name="payment_method" id="mollie" value="mollie">
+                                <label class="form-check-label h6 mb-0 ms-2" for="mollie">
+                                    Mollie
+                                </label>
+                            </div>
+                            <span class="fw-bold fs-4">mollie</span>
                         </div>
                     </div>
 

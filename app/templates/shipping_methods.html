@@ -36,6 +36,7 @@
         <div class="col-lg-8">
             <div class="bg-white rounded shadow-sm p-4 mb-4">
                 <form id="shipping-methods-form" method="POST" action="{{ url_for('checkout_bp.shipping_methods_save') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="card mb-3 border {{ 'border-primary bg-light' if selected_shipping == 'standard' }}">
                         <div class="card-body">
                             <div class="form-check">

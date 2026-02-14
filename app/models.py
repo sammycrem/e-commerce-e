@@ -9,7 +9,7 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False, index=True) # Indexed
     user_id = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
     encrypted_password = db.Column(db.String(128), nullable=False)
@@ -18,6 +18,8 @@ class User(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     orders = db.relationship('Order', back_populates='user')
     addresses = db.relationship('Address', back_populates='user', cascade='all, delete-orphan')
+    messages = db.relationship('Message', back_populates='user', cascade='all, delete-orphan')
+    reviews = db.relationship('Review', back_populates='user', cascade='all, delete-orphan')
 
 class Product(db.Model):
     __tablename__ = 'products'
@@ -25,7 +27,7 @@ class Product(db.Model):
     product_sku = db.Column(db.Text, nullable=False, unique=True)
     name = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-    category = db.Column(db.Text)
+    category = db.Column(db.Text, index=True) # Indexed
     base_price_cents = db.Column(db.BigInteger, nullable=False)
     short_description = db.Column(db.Text)
     product_details = db.Column(db.Text)
@@ -36,8 +38,21 @@ class Product(db.Model):
     tag3 = db.Column(db.Text)
     weight_grams = db.Column(db.Integer, nullable=True)
     dimensions_json = db.Column(SA_JSON, nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     variants = db.relationship('Variant', back_populates='product', cascade='all, delete-orphan')
     images = db.relationship('ProductImage', back_populates='product', cascade='all, delete-orphan', order_by='ProductImage.display_order')
+    reviews = db.relationship('Review', back_populates='product', cascade='all, delete-orphan')
+
+    @property
+    def average_rating(self):
+        if not self.reviews:
+            return 0
+        total = sum(r.rating for r in self.reviews)
+        return round(total / len(self.reviews), 1)
+
+    @property
+    def review_count(self):
+        return len(self.reviews)
 
 class Variant(db.Model):
     __tablename__ = 'variants'
@@ -74,7 +89,7 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     public_order_id = db.Column(db.Text, nullable=False, unique=True, default=lambda: f"ORD-{str(uuid.uuid4())[:8].upper()}")
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    status = db.Column(db.String(30), nullable=False, default='PENDING')
+    status = db.Column(db.String(30), nullable=False, default='PENDING', index=True) # Indexed
     subtotal_cents = db.Column(db.BigInteger, nullable=False, default=0)
     discount_cents = db.Column(db.BigInteger, nullable=False, default=0)
     shipping_cost_cents = db.Column(db.BigInteger, nullable=False, default=0)
@@ -82,6 +97,8 @@ class Order(db.Model):
     total_cents = db.Column(db.BigInteger, nullable=False, default=0)
     shipping_method = db.Column(db.String(50), nullable=True)
     payment_method = db.Column(db.String(50), nullable=True)
+    payment_provider = db.Column(db.String(50), nullable=True)
+    payment_transaction_id = db.Column(db.Text, nullable=True)
     comment = db.Column(db.Text, nullable=True)
     shipping_provider = db.Column(db.Text, nullable=True)
     tracking_number = db.Column(db.Text, nullable=True)
@@ -93,6 +110,7 @@ class Order(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     user = db.relationship('User', back_populates='orders')
     items = db.relationship('OrderItem', back_populates='order', cascade='all, delete-orphan')
+    messages = db.relationship('Message', back_populates='order', cascade='all, delete-orphan')
 
 class OrderItem(db.Model):
     __tablename__ = 'order_items'
@@ -178,3 +196,28 @@ class Address(db.Model):
     phone_number = db.Column(db.String(20))
     is_default = db.Column(db.Boolean, default=False)
     user = db.relationship('User', back_populates='addresses')
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
+    sender_type = db.Column(db.String(10), nullable=False) # 'USER' or 'ADMIN'
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    is_read = db.Column(db.Boolean, default=False)
+
+    user = db.relationship('User', back_populates='messages')
+    order = db.relationship('Order', back_populates='messages')
+
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='CASCADE'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+
+    user = db.relationship('User', back_populates='reviews')
+    product = db.relationship('Product', back_populates='reviews')
